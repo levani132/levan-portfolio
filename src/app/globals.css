@@ -59,6 +59,55 @@ body {
   }
 }
 
+/* Hero entrance animation – runs on compositor thread */
+@keyframes hero-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hero-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.hero-entrance {
+  opacity: 0;
+  animation: hero-fade-in-up 0.7s ease-out forwards;
+  will-change: transform, opacity;
+}
+
+.hero-entrance-fade {
+  opacity: 0;
+  animation: hero-fade-in 0.7s ease-out forwards;
+  will-change: opacity;
+}
+
+.hero-delay-0   { animation-delay: 0ms; }
+.hero-delay-200 { animation-delay: 200ms; }
+.hero-delay-400 { animation-delay: 400ms; }
+.hero-delay-500 { animation-delay: 500ms; }
+.hero-delay-700 { animation-delay: 700ms; }
+.hero-delay-900 { animation-delay: 900ms; }
+.hero-delay-1200 { animation-delay: 1200ms; }
+
+/* Orb fade-in – delayed to avoid competing with entrance animations */
+@keyframes orb-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.orb-entrance {
+  opacity: 0;
+  animation: orb-fade-in 1.5s ease-out 0.8s forwards;
+  will-change: transform;
+}
+
 /* Marquee animation */
 @keyframes marquee {
   0% {

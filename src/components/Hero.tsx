@@ -172,9 +172,13 @@ function InteractiveDotGrid() {
       raf.current = requestAnimationFrame(draw);
     };
 
-    raf.current = requestAnimationFrame(draw);
+    // Delay canvas start so entrance CSS animations play smoothly first
+    const delayTimer = setTimeout(() => {
+      raf.current = requestAnimationFrame(draw);
+    }, 1200);
 
     return () => {
+      clearTimeout(delayTimer);
       window.removeEventListener("mousemove", handleMove);
       window.removeEventListener("click", handleClick);
       cancelAnimationFrame(raf.current);
@@ -239,22 +243,22 @@ export default function Hero() {
 
   return (
     <section className="relative flex min-h-screen items-center justify-center overflow-x-clip px-6 pt-20">
-      {/* Animated gradient orbs – extends below hero so blurs aren't clipped */}
+      {/* Gradient orbs – CSS-only entrance, then Framer for infinite drift */}
       <div className="pointer-events-none absolute -bottom-40 left-0 right-0 top-0">
         <motion.div
           animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
           transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-sky-500/20 blur-[60px] sm:blur-[100px] md:blur-[120px]"
+          className="orb-entrance absolute -left-32 -top-32 h-96 w-96 rounded-full bg-sky-500/20 blur-[60px] sm:blur-[100px] md:blur-[120px]"
         />
         <motion.div
           animate={{ x: [0, -20, 0], y: [0, 30, 0] }}
           transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-cyan-500/20 blur-[60px] sm:blur-[100px] md:blur-[120px]"
+          className="orb-entrance absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-cyan-500/20 blur-[60px] sm:blur-[100px] md:blur-[120px]"
         />
         <motion.div
           animate={{ x: [0, 15, 0], y: [0, 15, 0] }}
           transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-[60px] md:blur-[100px]"
+          className="orb-entrance absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-[60px] md:blur-[100px]"
         />
       </div>
 
@@ -263,11 +267,7 @@ export default function Hero() {
 
       <div className="relative z-10 mx-auto max-w-5xl text-center">
         {/* Status badge */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
+        <div className="hero-entrance hero-delay-0">
           <span className="inline-flex items-center gap-2 rounded-full border border-sky-500/20 bg-sky-500/10 px-4 py-1.5 text-sm text-sky-600 dark:text-sky-400">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" />
@@ -275,36 +275,27 @@ export default function Hero() {
             </span>
             {t("hero.status")}
           </span>
-        </motion.div>
+        </div>
 
         {/* Name with gradient */}
-        <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="mt-8 text-6xl font-bold tracking-tight sm:text-7xl lg:text-8xl"
+        <h1
+          className="hero-entrance hero-delay-200 mt-8 text-6xl font-bold tracking-tight sm:text-7xl lg:text-8xl"
         >
           <span className="gradient-text">{t("hero.firstName")}</span>
           <br />
           <span className="text-zinc-900 dark:text-zinc-100">{t("hero.lastName")}</span>
-        </motion.h1>
+        </h1>
 
         {/* Title */}
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.4 }}
-          className="mt-6 text-xl font-medium text-zinc-500 dark:text-zinc-400 sm:text-2xl"
+        <p
+          className="hero-entrance hero-delay-400 mt-6 text-xl font-medium text-zinc-500 dark:text-zinc-400 sm:text-2xl"
         >
           {t("hero.title")}
-        </motion.p>
+        </p>
 
         {/* Description */}
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.5 }}
-          className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-600 dark:text-zinc-400"
+        <p
+          className="hero-entrance hero-delay-500 mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-600 dark:text-zinc-400"
         >
           {t("hero.desc")}{" "}
           <span className="font-medium text-zinc-900 dark:text-zinc-200">
@@ -319,14 +310,11 @@ export default function Hero() {
             EPAM&nbsp;Systems
           </span>
           .
-        </motion.p>
+        </p>
 
         {/* Stats bento grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.7 }}
-          className="mx-auto mt-12 grid max-w-lg grid-cols-2 gap-4 sm:grid-cols-4"
+        <div
+          className="hero-entrance hero-delay-700 mx-auto mt-12 grid max-w-lg grid-cols-2 gap-4 sm:grid-cols-4"
         >
           {stats.map((stat) => (
             <div
@@ -341,14 +329,11 @@ export default function Hero() {
               </div>
             </div>
           ))}
-        </motion.div>
+        </div>
 
         {/* Social links */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.7, delay: 0.9 }}
-          className="mt-10 flex items-center justify-center gap-4"
+        <div
+          className="hero-entrance-fade hero-delay-900 mt-10 flex items-center justify-center gap-4"
         >
           <a
             href="mailto:levan@example.com"
@@ -372,14 +357,11 @@ export default function Hero() {
           >
             <Github size={18} />
           </a>
-        </motion.div>
+        </div>
 
         {/* Scroll indicator */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 1.2 }}
-          className="mt-20"
+        <div
+          className="hero-entrance-fade hero-delay-1200 mt-20"
         >
           <a
             href="#about"
@@ -393,7 +375,7 @@ export default function Hero() {
               <ChevronDown size={20} />
             </motion.div>
           </a>
-        </motion.div>
+        </div>
       </div>
     </section>
   );
