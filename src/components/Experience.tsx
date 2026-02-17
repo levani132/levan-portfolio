@@ -109,12 +109,12 @@ function JobCard({ job, index }: { job: Job; index: number }) {
       className="group relative"
     >
       {/* Timeline connector */}
-      <div className="absolute left-4.75 top-12 bottom-0 w-px bg-linear-to-b from-violet-500/50 to-transparent dark:from-violet-500/30" />
+      <div className="absolute left-4.75 top-12 bottom-0 w-px bg-linear-to-b from-sky-500/50 to-transparent dark:from-sky-500/30" />
 
       <div className="relative flex gap-6">
         {/* Timeline dot */}
-        <div className="relative z-10 mt-1.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-violet-500/30 bg-white dark:bg-zinc-950">
-          <Building2 size={16} className="text-violet-500" />
+        <div className="relative z-10 mt-1.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-sky-500/30 bg-white dark:bg-zinc-950">
+          <Building2 size={16} className="text-sky-500" />
         </div>
 
         {/* Content card */}
@@ -123,10 +123,10 @@ function JobCard({ job, index }: { job: Job; index: number }) {
             onClick={() => setExpanded(!expanded)}
             className="w-full text-left"
           >
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 transition-all hover:border-violet-500/30 hover:shadow-lg hover:shadow-violet-500/5 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-violet-500/30">
+            <div className="rounded-2xl border border-zinc-200 bg-white p-5 transition-all hover:border-sky-500/30 hover:shadow-lg hover:shadow-sky-500/5 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-sky-500/30">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <div className="text-sm font-medium text-violet-500">
+                  <div className="text-sm font-medium text-sky-500">
                     {t(job.periodKey)}
                   </div>
                   <h3 className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">
@@ -171,7 +171,7 @@ function JobCard({ job, index }: { job: Job; index: number }) {
                           key={i}
                           className="flex gap-2 text-sm text-zinc-600 dark:text-zinc-400"
                         >
-                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-500/50" />
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500/50" />
                           {t(rKey)}
                         </li>
                       ))}
@@ -181,7 +181,7 @@ function JobCard({ job, index }: { job: Job; index: number }) {
                         {job.tech.map((t) => (
                           <span
                             key={t}
-                            className="rounded-full bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-600 dark:text-violet-400"
+                            className="rounded-full bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-600 dark:text-sky-400"
                           >
                             {t}
                           </span>
@@ -216,7 +216,7 @@ export default function Experience() {
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.6 }}
         >
-          <span className="text-sm font-medium uppercase tracking-widest text-violet-500">
+          <span className="text-sm font-medium uppercase tracking-widest text-sky-500">
             {t("exp.label")}
           </span>
           <h2 className="mt-2 text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-4xl">

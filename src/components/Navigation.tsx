@@ -42,7 +42,7 @@ export default function Navigation() {
           href="#"
           className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100"
         >
-          L<span className="text-violet-500">.</span>B
+          L<span className="text-sky-500">.</span>B
         </a>
 
         <ul className="hidden gap-8 md:flex">
@@ -50,7 +50,7 @@ export default function Navigation() {
             <li key={link.href}>
               <a
                 href={link.href}
-                className="text-sm font-medium text-zinc-600 transition-colors hover:text-violet-500 dark:text-zinc-400 dark:hover:text-violet-400"
+                className="text-sm font-medium text-zinc-600 transition-colors hover:text-sky-500 dark:text-zinc-400 dark:hover:text-sky-400"
               >
                 {link.label}
               </a>
@@ -67,7 +67,7 @@ export default function Navigation() {
 
           <a
             href="mailto:levan@example.com"
-            className="ml-2 rounded-full bg-violet-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-600"
+            className="ml-2 rounded-full bg-sky-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-sky-600"
           >
             {t("nav.contact")}
           </a>
@@ -96,7 +96,7 @@ export default function Navigation() {
                   <a
                     href={link.href}
                     onClick={() => setMobileOpen(false)}
-                    className="block rounded-lg px-4 py-3 text-sm font-medium text-zinc-600 transition-colors hover:bg-violet-500/10 hover:text-violet-500 dark:text-zinc-400"
+                    className="block rounded-lg px-4 py-3 text-sm font-medium text-zinc-600 transition-colors hover:bg-sky-500/10 hover:text-sky-500 dark:text-zinc-400"
                   >
                     {link.label}
                   </a>
@@ -110,7 +110,7 @@ export default function Navigation() {
               <li>
                 <a
                   href="mailto:levan@example.com"
-                  className="mt-2 block rounded-full bg-violet-500 px-4 py-3 text-center text-sm font-medium text-white"
+                  className="mt-2 block rounded-full bg-sky-500 px-4 py-3 text-center text-sm font-medium text-white"
                   onClick={() => setMobileOpen(false)}
                 >
                   {t("nav.contact")}
@@ -150,7 +150,7 @@ function LanguageSwitcher({ locale }: { locale: Locale }) {
           {locale === l && (
             <motion.span
               layoutId="lang-pill"
-              className="absolute inset-0 rounded-full bg-violet-500"
+              className="absolute inset-0 rounded-full bg-sky-500"
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
             />
           )}
@@ -191,7 +191,7 @@ function ThemeToggle({
               exit={{ rotate: 90, opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <Moon size={12} className="text-violet-400" />
+              <Moon size={12} className="text-sky-400" />
             </motion.div>
           ) : (
             <motion.div

@@ -141,13 +141,13 @@ function InteractiveDotGrid() {
             // Outer glow ring
             ctx.beginPath();
             ctx.arc(drawX, drawY, glowSize + strength * 8, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(139, 92, 246, ${strength * 0.12})`;
+            ctx.fillStyle = `rgba(14, 165, 233, ${strength * 0.12})`;
             ctx.fill();
 
             // Core dot
             ctx.beginPath();
             ctx.arc(drawX, drawY, glowSize, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(139, 92, 246, ${alpha})`;
+            ctx.fillStyle = `rgba(14, 165, 233, ${alpha})`;
             ctx.fill();
           } else {
             ctx.beginPath();
@@ -227,13 +227,13 @@ export default function Hero() {
   ];
 
   return (
-    <section className="relative flex min-h-screen items-center justify-center overflow-x-clip px-6">
+    <section className="relative flex min-h-screen items-center justify-center overflow-x-clip px-6 pt-20">
       {/* Animated gradient orbs – extends below hero so blurs aren't clipped */}
       <div className="pointer-events-none absolute -bottom-40 left-0 right-0 top-0">
         <motion.div
           animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
           transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-violet-500/20 blur-[120px]"
+          className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-sky-500/20 blur-[120px]"
         />
         <motion.div
           animate={{ x: [0, -20, 0], y: [0, 30, 0] }}
@@ -243,7 +243,7 @@ export default function Hero() {
         <motion.div
           animate={{ x: [0, 15, 0], y: [0, 15, 0] }}
           transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-500/10 blur-[100px]"
+          className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-[100px]"
         />
       </div>
 
@@ -257,10 +257,10 @@ export default function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <span className="inline-flex items-center gap-2 rounded-full border border-violet-500/20 bg-violet-500/10 px-4 py-1.5 text-sm text-violet-600 dark:text-violet-400">
+          <span className="inline-flex items-center gap-2 rounded-full border border-sky-500/20 bg-sky-500/10 px-4 py-1.5 text-sm text-sky-600 dark:text-sky-400">
             <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-500" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-sky-500" />
             </span>
             {t("hero.status")}
           </span>
@@ -320,7 +320,7 @@ export default function Hero() {
           {stats.map((stat) => (
             <div
               key={stat.label}
-              className="group rounded-2xl border border-zinc-200 bg-white/50 p-4 backdrop-blur-sm transition-all hover:border-violet-500/30 hover:shadow-lg hover:shadow-violet-500/5 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-violet-500/30"
+              className="group rounded-2xl border border-zinc-200 bg-white/50 p-4 backdrop-blur-sm transition-all hover:border-sky-500/30 hover:shadow-lg hover:shadow-sky-500/5 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-sky-500/30"
             >
               <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
                 <AnimatedCounter target={stat.value} suffix={stat.suffix} />
@@ -341,7 +341,7 @@ export default function Hero() {
         >
           <a
             href="mailto:levan@example.com"
-            className="flex items-center gap-2 rounded-full border border-zinc-200 px-5 py-2.5 text-sm font-medium text-zinc-700 transition-all hover:border-violet-500/50 hover:bg-violet-500/10 hover:text-violet-600 dark:border-zinc-800 dark:text-zinc-300 dark:hover:border-violet-500/50 dark:hover:text-violet-400"
+            className="flex items-center gap-2 rounded-full border border-zinc-200 px-5 py-2.5 text-sm font-medium text-zinc-700 transition-all hover:border-sky-500/50 hover:bg-sky-500/10 hover:text-sky-600 dark:border-zinc-800 dark:text-zinc-300 dark:hover:border-sky-500/50 dark:hover:text-sky-400"
           >
             <Mail size={16} /> {t("hero.getInTouch")}
           </a>
@@ -349,7 +349,7 @@ export default function Hero() {
             href="https://linkedin.com/in/"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full border border-zinc-200 p-2.5 text-zinc-500 transition-all hover:border-violet-500/50 hover:bg-violet-500/10 hover:text-violet-600 dark:border-zinc-800 dark:hover:border-violet-500/50 dark:hover:text-violet-400"
+            className="rounded-full border border-zinc-200 p-2.5 text-zinc-500 transition-all hover:border-sky-500/50 hover:bg-sky-500/10 hover:text-sky-600 dark:border-zinc-800 dark:hover:border-sky-500/50 dark:hover:text-sky-400"
           >
             <Linkedin size={18} />
           </a>
@@ -357,7 +357,7 @@ export default function Hero() {
             href="https://github.com/"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full border border-zinc-200 p-2.5 text-zinc-500 transition-all hover:border-violet-500/50 hover:bg-violet-500/10 hover:text-violet-600 dark:border-zinc-800 dark:hover:border-violet-500/50 dark:hover:text-violet-400"
+            className="rounded-full border border-zinc-200 p-2.5 text-zinc-500 transition-all hover:border-sky-500/50 hover:bg-sky-500/10 hover:text-sky-600 dark:border-zinc-800 dark:hover:border-sky-500/50 dark:hover:text-sky-400"
           >
             <Github size={18} />
           </a>
@@ -372,7 +372,7 @@ export default function Hero() {
         >
           <a
             href="#about"
-            className="inline-flex flex-col items-center gap-2 text-sm text-zinc-400 transition-colors hover:text-violet-500"
+            className="inline-flex flex-col items-center gap-2 text-sm text-zinc-400 transition-colors hover:text-sky-500"
           >
             {t("hero.scroll")}
             <motion.div

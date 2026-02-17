@@ -62,7 +62,7 @@ export default function About() {
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.6 }}
         >
-          <span className="text-sm font-medium uppercase tracking-widest text-violet-500">
+          <span className="text-sm font-medium uppercase tracking-widest text-sky-500">
             {t("about.label")}
           </span>
           <h2 className="mt-2 text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-4xl">
@@ -81,9 +81,9 @@ export default function About() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
               transition={{ duration: 0.4, delay: i * 0.08 }}
-              className={`group rounded-2xl border border-zinc-200 bg-white p-6 transition-all hover:border-violet-500/30 hover:shadow-lg hover:shadow-violet-500/5 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-violet-500/30 ${card.span}`}
+              className={`group rounded-2xl border border-zinc-200 bg-white p-6 transition-all hover:border-sky-500/30 hover:shadow-lg hover:shadow-sky-500/5 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-sky-500/30 ${card.span}`}
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10 text-violet-500 transition-colors group-hover:bg-violet-500/20">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/10 text-sky-500 transition-colors group-hover:bg-sky-500/20">
                 <card.icon size={20} />
               </div>
               <h3 className="mt-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">

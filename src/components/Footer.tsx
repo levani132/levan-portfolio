@@ -11,7 +11,7 @@ export default function Footer() {
         <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
           <div>
             <span className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-              L<span className="text-violet-500">.</span>B
+              L<span className="text-sky-500">.</span>B
             </span>
             <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
               {t("footer.title")}
@@ -20,7 +20,7 @@ export default function Footer() {
           <div className="flex gap-8 text-sm text-zinc-500 dark:text-zinc-400">
             <a
               href="mailto:levan@example.com"
-              className="transition-colors hover:text-violet-500"
+              className="transition-colors hover:text-sky-500"
             >
               Email
             </a>
@@ -28,7 +28,7 @@ export default function Footer() {
               href="https://linkedin.com/in/"
               target="_blank"
               rel="noopener noreferrer"
-              className="transition-colors hover:text-violet-500"
+              className="transition-colors hover:text-sky-500"
             >
               LinkedIn
             </a>
@@ -36,7 +36,7 @@ export default function Footer() {
               href="https://github.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="transition-colors hover:text-violet-500"
+              className="transition-colors hover:text-sky-500"
             >
               GitHub
             </a>
