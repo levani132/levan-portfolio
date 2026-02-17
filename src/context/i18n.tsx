@@ -19,6 +19,7 @@ const dict = {
   "nav.about": { en: "About", ka: "ჩემს შესახებ" },
   "nav.experience": { en: "Experience", ka: "გამოცდილება" },
   "nav.skills": { en: "Skills", ka: "უნარები" },
+  "nav.projects": { en: "Projects", ka: "პროექტები" },
   "nav.education": { en: "Education", ka: "განათლება" },
   "nav.contact": { en: "Contact", ka: "კონტაქტი" },
 
@@ -310,6 +311,26 @@ const dict = {
   },
   "edu.master": { en: "Master", ka: "მაგისტრი" },
   "edu.bachelorType": { en: "Bachelor", ka: "ბაკალავრი" },
+
+  /* ── Projects ── */
+  "projects.subtitle": { en: "Personal Projects", ka: "პირადი პროექტები" },
+  "projects.title": { en: "Side Projects", ka: "პირადი პროექტები" },
+  "projects.visit": { en: "Visit Site", ka: "ვებსაიტი" },
+  "projects.github": { en: "GitHub", ka: "GitHub" },
+
+  "projects.shopit.title": { en: "ShopIt — Multi-Vendor E-Commerce Platform", ka: "ShopIt — მრავალ-მოვაჭრე ელექტრონული კომერციის პლატფორმა" },
+  "projects.shopit.desc": {
+    en: "A platform where anyone can create their own online store with a custom subdomain. Built with modern technologies and scalable architecture.",
+    ka: "პლატფორმა, სადაც ნებისმიერს შეუძლია შექმნას საკუთარი ონლაინ მაღაზია მორგებული ქვედომენით. აშენებულია თანამედროვე ტექნოლოგიებითა და მასშტაბური არქიტექტურით.",
+  },
+  "projects.shopit.role": { en: "Founder & Full-Stack Developer", ka: "დამფუძნებელი და Full-Stack დეველოპერი" },
+
+  "projects.soulart.title": { en: "SoulArt — Art E-Commerce Platform", ka: "SoulArt — ხელოვნების ელექტრონული კომერციის პლატფორმა" },
+  "projects.soulart.desc": {
+    en: "An e-commerce platform dedicated to art lovers, featuring AI-powered recommendations, Stripe & PayPal integration, and PWA support.",
+    ka: "ელექტრონული კომერციის პლატფორმა ხელოვნების მოყვარულებისთვის, AI-ზე დაფუძნებული რეკომენდაციებით, Stripe და PayPal ინტეგრაციით და PWA მხარდაჭერით.",
+  },
+  "projects.soulart.role": { en: "Founder & Full-Stack Developer", ka: "დამფუძნებელი და Full-Stack დეველოპერი" },
 
   /* ── Footer ── */
   "footer.title": { en: "Lead Software Engineer", ka: "წამყვანი პროგრამული ინჟინერი" },
