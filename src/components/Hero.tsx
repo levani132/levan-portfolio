@@ -16,8 +16,15 @@ function InteractiveDotGrid() {
   const isOver = useRef(false);
   const pulses = useRef<Pulse[]>([]);
   const raf = useRef<number>(0);
+  const lastFrameTime = useRef(0);
+  const prefersReducedMotion = useRef(false);
 
   useEffect(() => {
+    // Check for prefers-reduced-motion
+    prefersReducedMotion.current = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -35,6 +42,7 @@ function InteractiveDotGrid() {
 
     // Click anywhere in the hero to spawn a pulse
     const handleClick = (e: MouseEvent) => {
+      if (prefersReducedMotion.current) return;
       const rect = canvas.getBoundingClientRect();
       const inX = e.clientX >= rect.left && e.clientX <= rect.right;
       const inY = e.clientY >= rect.top && e.clientY <= rect.bottom;
@@ -46,17 +54,26 @@ function InteractiveDotGrid() {
       });
     };
 
-    window.addEventListener("mousemove", handleMove);
-    window.addEventListener("click", handleClick);
+    window.addEventListener("mousemove", handleMove, { passive: true });
+    window.addEventListener("click", handleClick, { passive: true });
 
     const LERP = 0.045;
     const FADE = 0.04;
-    const PULSE_DURATION = 2400; // total ms for 3 beats then fade
+    const PULSE_DURATION = 2400;
     const PULSE_RADIUS = 140;
+    const TARGET_FPS = 30; // Cap at 30 FPS on mobile
+    const FRAME_TIME = 1000 / TARGET_FPS;
 
-    const draw = () => {
+    const draw = (currentTime: number) => {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
+
+      // Throttle frame rate for mobile
+      if (currentTime - lastFrameTime.current < FRAME_TIME) {
+        raf.current = requestAnimationFrame(draw);
+        return;
+      }
+      lastFrameTime.current = currentTime;
 
       const dpr = window.devicePixelRatio || 1;
       const w = canvas.clientWidth;
@@ -77,7 +94,6 @@ function InteractiveDotGrid() {
       intensity.current += (targetIntensity - intensity.current) * FADE;
 
       const now = performance.now();
-      // Prune expired pulses
       pulses.current = pulses.current.filter(
         (p) => now - p.birth < PULSE_DURATION
       );
@@ -97,7 +113,6 @@ function InteractiveDotGrid() {
 
       for (let x = gap / 2; x < w; x += gap) {
         for (let y = gap / 2; y < h; y += gap) {
-          // --- Pulse contribution ---
           let pulseStrength = 0;
           for (const p of pulses.current) {
             const pdx = x - p.x;
@@ -105,10 +120,9 @@ function InteractiveDotGrid() {
             const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
             if (pdist >= PULSE_RADIUS) continue;
 
-            const age = (now - p.birth) / PULSE_DURATION; // 0..1
-            // 3 beats: sin wave with 3 peaks, envelope fades out
+            const age = (now - p.birth) / PULSE_DURATION;
             const beat = Math.sin(age * Math.PI * 6) * 0.5 + 0.5;
-            const envelope = 1 - age; // linear fade
+            const envelope = 1 - age;
             const spatial = 1 - pdist / PULSE_RADIUS;
             pulseStrength = Math.max(
               pulseStrength,
@@ -116,7 +130,6 @@ function InteractiveDotGrid() {
             );
           }
 
-          // --- Cursor glow contribution ---
           const dx = x - mx;
           const dy = y - my;
           const dist = Math.sqrt(dx * dx + dy * dy);
@@ -138,13 +151,11 @@ function InteractiveDotGrid() {
             const glowSize = baseRadius + strength * 4;
             const alpha = 0.04 + strength * 0.7;
 
-            // Outer glow ring
             ctx.beginPath();
             ctx.arc(drawX, drawY, glowSize + strength * 8, 0, Math.PI * 2);
             ctx.fillStyle = `rgba(14, 165, 233, ${strength * 0.12})`;
             ctx.fill();
 
-            // Core dot
             ctx.beginPath();
             ctx.arc(drawX, drawY, glowSize, 0, Math.PI * 2);
             ctx.fillStyle = `rgba(14, 165, 233, ${alpha})`;
@@ -233,17 +244,17 @@ export default function Hero() {
         <motion.div
           animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
           transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-sky-500/20 blur-[120px]"
+          className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-sky-500/20 blur-[60px] sm:blur-[100px] md:blur-[120px]"
         />
         <motion.div
           animate={{ x: [0, -20, 0], y: [0, 30, 0] }}
           transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-cyan-500/20 blur-[120px]"
+          className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-cyan-500/20 blur-[60px] sm:blur-[100px] md:blur-[120px]"
         />
         <motion.div
           animate={{ x: [0, 15, 0], y: [0, 15, 0] }}
           transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-[100px]"
+          className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-[60px] md:blur-[100px]"
         />
       </div>
 
