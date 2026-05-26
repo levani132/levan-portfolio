@@ -34,14 +34,42 @@ export default function Navigation() {
       transition={{ duration: 0.5, ease: "easeOut" }}
       className="fixed inset-x-0 top-4 z-50 flex justify-center px-4"
     >
-      {/* Floating glass pill */}
+      {/* Liquid-glass pill */}
       <div
-        className={`relative flex w-full max-w-3xl items-center justify-between gap-3 rounded-full border px-3 py-2 backdrop-blur-xl transition-all duration-300 ${
+        className={`group relative flex w-full max-w-3xl items-center justify-between gap-3 rounded-full px-3 py-2 transition-all duration-500 ${
           scrolled
-            ? "border-white/15 bg-zinc-950/60 shadow-[0_8px_40px_rgba(14,165,233,0.18)] dark:border-white/10 dark:bg-zinc-950/60"
-            : "border-white/10 bg-zinc-950/35 shadow-[0_4px_30px_rgba(0,0,0,0.25)] dark:border-white/10 dark:bg-zinc-950/35"
+            ? "bg-white/[0.07] shadow-[0_12px_50px_-12px_rgba(0,0,0,0.7),0_3px_10px_rgba(0,0,0,0.25),inset_0_1.5px_0_0_rgba(255,255,255,0.35),inset_0_-1px_0_0_rgba(255,255,255,0.06),inset_0_0_0_1px_rgba(255,255,255,0.14)]"
+            : "bg-white/[0.05] shadow-[0_10px_40px_-12px_rgba(0,0,0,0.55),0_2px_6px_rgba(0,0,0,0.2),inset_0_1.5px_0_0_rgba(255,255,255,0.3),inset_0_-1px_0_0_rgba(255,255,255,0.04),inset_0_0_0_1px_rgba(255,255,255,0.1)]"
         }`}
+        style={{
+          // Heavier blur + saturation boost = "Liquid Glass" feel.
+          // Colors behind the pill (the cosmos) pop through more vividly.
+          backdropFilter: "blur(28px) saturate(180%)",
+          WebkitBackdropFilter: "blur(28px) saturate(180%)",
+        }}
       >
+        {/* Top-edge specular highlight — simulates reflected light on glass */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-full"
+        >
+          <span
+            className="absolute inset-x-6 -top-px h-1/2 rounded-full opacity-90"
+            style={{
+              background:
+                "radial-gradient(60% 100% at 50% 0%, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.08) 45%, transparent 75%)",
+            }}
+          />
+          {/* Soft inner color tint that picks up whatever is behind */}
+          <span
+            className="absolute inset-0 rounded-full opacity-60"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 35%, rgba(255,255,255,0) 65%, rgba(255,255,255,0.04) 100%)",
+            }}
+          />
+        </span>
+
         {/* Brand mark – glowing dot + initials */}
         <a
           href="#"
@@ -96,7 +124,11 @@ export default function Navigation() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
-            className="absolute left-4 right-4 top-full mt-2 overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/85 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.5)] md:hidden"
+            className="absolute left-4 right-4 top-full mt-2 overflow-hidden rounded-2xl bg-white/[0.06] shadow-[0_12px_50px_-12px_rgba(0,0,0,0.7),inset_0_1px_0_0_rgba(255,255,255,0.25),inset_0_0_0_1px_rgba(255,255,255,0.12)] md:hidden"
+            style={{
+              backdropFilter: "blur(28px) saturate(180%)",
+              WebkitBackdropFilter: "blur(28px) saturate(180%)",
+            }}
           >
             <ul className="flex flex-col gap-1 p-3">
               {navLinks.map((link) => (

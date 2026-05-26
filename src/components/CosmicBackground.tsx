@@ -117,7 +117,8 @@ export default function CosmicBackground() {
     // shape builders use, so the *same* particle goes to a logical place in
     // every shape. That's what makes the morph feel coherent rather than
     // chaotic.
-    const N = isSmall ? 2400 : 4800;
+    // Cranked up density — this is what gives the shapes "body" / soul.
+    const N = isSmall ? 3200 : 9000;
     const u = new Float32Array(N);
     const v = new Float32Array(N);
     const r = new Float32Array(N);
@@ -137,9 +138,9 @@ export default function CosmicBackground() {
     ];
     const palettes: Float32Array[] = [
       colorRing(N, u),
-      colorSphere(N, u),
-      colorColumn(N, r),
-      colorNebula(N, u),
+      colorSphere(N, u, v),
+      colorColumn(N, v, r),
+      colorNebula(N, u, r),
       colorWave(N, u),
       colorSpiral(N, u),
     ];
@@ -157,17 +158,48 @@ export default function CosmicBackground() {
     featGeo.setAttribute("color", colAttr);
 
     const featMat = new THREE.PointsMaterial({
-      size: 3.0,
+      size: 4.2,
       vertexColors: true,
       map: circleSprite,
       transparent: true,
-      opacity: 0.95,
+      opacity: 1.0,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
       sizeAttenuation: true,
     });
     const feature = new THREE.Points(featGeo, featMat);
     scene.add(feature);
+
+    // Bloom layer — a sparse set of LARGE soft points that overlap the main
+    // particles to fake bloom/halo and add genuine "glow" to bright zones.
+    const BLOOM_N = isSmall ? 220 : 480;
+    const bloomGeo = new THREE.BufferGeometry();
+    const bloomPos = new Float32Array(BLOOM_N * 3);
+    const bloomCol = new Float32Array(BLOOM_N * 3);
+    // Bloom particles cherry-pick a subset of the main seeds, so they live
+    // exactly on bright zones in every shape.
+    const bloomIdx = new Uint32Array(BLOOM_N);
+    for (let i = 0; i < BLOOM_N; i++) {
+      bloomIdx[i] = Math.floor(Math.random() * N);
+    }
+    const bloomPosAttr = new THREE.BufferAttribute(bloomPos, 3);
+    const bloomColAttr = new THREE.BufferAttribute(bloomCol, 3);
+    bloomPosAttr.setUsage(THREE.DynamicDrawUsage);
+    bloomColAttr.setUsage(THREE.DynamicDrawUsage);
+    bloomGeo.setAttribute("position", bloomPosAttr);
+    bloomGeo.setAttribute("color", bloomColAttr);
+    const bloomMat = new THREE.PointsMaterial({
+      size: 22,
+      vertexColors: true,
+      map: glowSprite,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      sizeAttenuation: true,
+    });
+    const bloom = new THREE.Points(bloomGeo, bloomMat);
+    scene.add(bloom);
 
     // Glowing core sprite — bright during the orbital-ring phase, fades out
     const coreMat = new THREE.SpriteMaterial({
@@ -179,7 +211,7 @@ export default function CosmicBackground() {
       depthWrite: false,
     });
     const core = new THREE.Sprite(coreMat);
-    core.scale.set(220, 220, 1);
+    core.scale.set(280, 280, 1);
     scene.add(core);
 
     // ── Scroll tracking (smoothed) ──────────────────────────────────────────
@@ -254,7 +286,23 @@ export default function CosmicBackground() {
       const CA = palettes[i0];
       const CB = palettes[i1];
 
-      // Per-particle live wobble — runs every frame, scroll or no scroll.
+      // Per-shape flow weights — blended by morph progress so motion feels
+      // shape-appropriate (column cascades down, nebula drifts sideways, etc).
+      // This is the per-shape "soul" — particles don't just wobble, they FLOW.
+      const wRing = shapeWeight(idx, 0);
+      // wSphere not used directly — sphere uses pure breath/rotation
+      const wColumn = shapeWeight(idx, 2);
+      const wNebula = shapeWeight(idx, 3);
+      const wWave = shapeWeight(idx, 4);
+
+      const cascadeAmt = wColumn; // particles streaming downward in column
+      const nebulaAmt = wNebula; // particles drifting along the nebula trail
+      const waveAmt = wWave; // particles drifting through wave field
+
+      const cascadeSpeed = 90; // px/sec
+      const nebulaSpeed = 70;
+
+      // Per-particle live wobble + per-shape flow — runs every frame.
       for (let i = 0; i < N; i++) {
         const i3 = i * 3;
         const phase = r[i] * 6.2831853;
@@ -263,14 +311,33 @@ export default function CosmicBackground() {
         const wob = 5 + r[i] * 9;
         const wobX = Math.sin(time * sp1 + phase) * wob;
         const wobY = Math.cos(time * sp2 + phase * 1.3) * wob;
-        const wobZ = Math.sin(time * (0.35 + v[i] * 0.4) + phase * 0.7) *
-          wob * 0.6;
+        const wobZ =
+          Math.sin(time * (0.35 + v[i] * 0.4) + phase * 0.7) * wob * 0.6;
+
+        // Column cascade — vertical wrap from +360 to -360
+        const colFlowY = cascadeAmt
+          ? -(((time * cascadeSpeed * (0.7 + r[i] * 0.6) + v[i] * 720) %
+              720) -
+              360)
+          : 0;
+        // Nebula drift — horizontal wrap
+        const nebFlowX = nebulaAmt
+          ? -(((time * nebulaSpeed * (0.7 + r[i] * 0.5) + u[i] * 1000) %
+              1000) -
+              500)
+          : 0;
+        // Wave drift — slow Z motion within the wave field
+        const wavFlowZ = waveAmt
+          ? Math.sin(time * 0.8 + u[i] * 6.28) * 18
+          : 0;
 
         const ax = A[i3], ay = A[i3 + 1], az = A[i3 + 2];
         const bx = B[i3], by = B[i3 + 1], bz = B[i3 + 2];
-        featPos[i3] = ax + (bx - ax) * eased + wobX;
-        featPos[i3 + 1] = ay + (by - ay) * eased + wobY;
-        featPos[i3 + 2] = az + (bz - az) * eased + wobZ;
+        featPos[i3] = ax + (bx - ax) * eased + wobX + nebFlowX * nebulaAmt;
+        featPos[i3 + 1] =
+          ay + (by - ay) * eased + wobY + colFlowY * cascadeAmt;
+        featPos[i3 + 2] =
+          az + (bz - az) * eased + wobZ + wavFlowZ * waveAmt;
 
         featCol[i3] = CA[i3] + (CB[i3] - CA[i3]) * eased;
         featCol[i3 + 1] = CA[i3 + 1] + (CB[i3 + 1] - CA[i3 + 1]) * eased;
@@ -279,25 +346,40 @@ export default function CosmicBackground() {
       featGeo.attributes.position.needsUpdate = true;
       featGeo.attributes.color.needsUpdate = true;
 
-      // Whole-body slow rotation — gives the constant "alive" feel
-      feature.rotation.y = time * 0.06;
+      // Bloom layer reads the main particle positions/colors directly so it
+      // always sits on the *brightest* zones of the current shape.
+      const bloomPulse = 0.85 + Math.sin(time * 1.8) * 0.15;
+      for (let i = 0; i < BLOOM_N; i++) {
+        const src = bloomIdx[i] * 3;
+        const dst = i * 3;
+        bloomPos[dst] = featPos[src];
+        bloomPos[dst + 1] = featPos[src + 1];
+        bloomPos[dst + 2] = featPos[src + 2];
+        bloomCol[dst] = featCol[src] * bloomPulse;
+        bloomCol[dst + 1] = featCol[src + 1] * bloomPulse;
+        bloomCol[dst + 2] = featCol[src + 2] * bloomPulse;
+      }
+      bloomGeo.attributes.position.needsUpdate = true;
+      bloomGeo.attributes.color.needsUpdate = true;
+
+      // Whole-body rotation — base drift, plus extra spin during ring/spiral
+      // phases (those shapes feel "alive" with orbit motion).
+      const wSpiral = shapeWeight(idx, 5);
+      const spinBoost = wRing * 0.18 + wSpiral * 0.22;
+      feature.rotation.y = time * (0.06 + spinBoost);
       feature.rotation.x = Math.sin(time * 0.18) * 0.04;
 
-      // Core glow — strongest at the very top (ring/orbit) and at the spiral
-      const ringWeight = Math.max(
-        0,
-        1 - Math.min(1, scrollProgress / 0.18)
-      );
-      const spiralWeight = Math.max(
-        0,
-        (scrollProgress - 0.85) / 0.15
-      );
+      // Core glow — pulses, brightest in ring + spiral phases
+      const ringWeight = Math.max(0, 1 - Math.min(1, scrollProgress / 0.18));
+      const spiralWeight = Math.max(0, (scrollProgress - 0.85) / 0.15);
       const themeMul = darkMode ? 1.0 : 0.4;
+      const pulse = 0.85 + Math.sin(time * 1.5) * 0.15;
       coreMat.opacity =
-        Math.max(ringWeight, spiralWeight) * 0.8 * themeMul;
+        Math.max(ringWeight, spiralWeight) * 0.95 * themeMul * pulse;
 
       starMat.opacity = 0.9 * themeMul;
-      featMat.opacity = 0.95 * themeMul;
+      featMat.opacity = 1.0 * themeMul;
+      bloomMat.opacity = 0.55 * themeMul * pulse;
 
       renderer.render(scene, camera);
       if (!reduced) rafId = requestAnimationFrame(render);
@@ -321,6 +403,8 @@ export default function CosmicBackground() {
       starMat.dispose();
       featGeo.dispose();
       featMat.dispose();
+      bloomGeo.dispose();
+      bloomMat.dispose();
       coreMat.dispose();
       circleSprite.dispose();
       glowSprite.dispose();
@@ -332,7 +416,15 @@ export default function CosmicBackground() {
       ref={mountRef}
       aria-hidden
       className="pointer-events-none fixed inset-0 z-0"
-      style={{ touchAction: "none" }}
+      style={{
+        touchAction: "none",
+        // Ambient color wash that sits behind the canvas — adds mood/warmth
+        // even when the active shape has no particles in that screen area.
+        background:
+          "radial-gradient(60% 50% at 50% 25%, rgba(120, 60, 220, 0.22), transparent 70%), " +
+          "radial-gradient(55% 45% at 80% 80%, rgba(30, 160, 230, 0.18), transparent 70%), " +
+          "radial-gradient(50% 40% at 15% 70%, rgba(220, 70, 160, 0.14), transparent 70%)",
+      }}
     />
   );
 }
@@ -480,57 +572,105 @@ function colorRing(N: number, u: Float32Array) {
   return col;
 }
 
-function colorSphere(N: number, u: Float32Array) {
+function colorSphere(N: number, u: Float32Array, v: Float32Array) {
+  // Hot pink/red at the top → vivid cyan at the bottom (matches the reel).
+  // v sweeps from 0..1 across "latitude" since buildSphere uses v for theta;
+  // we use u (which feeds phi) to drive vertical position instead — phi = acos(2u-1),
+  // so u=0 is top, u=1 is bottom.
   const col = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) {
-    const t = u[i];
-    col[i * 3] = 0.3 + t * 0.7; // red→white sweep
-    col[i * 3 + 1] = 0.25 + (1 - t) * 0.45;
-    col[i * 3 + 2] = 0.9 + (1 - t) * 0.1;
+    const t = u[i]; // 0 = north pole, 1 = south
+    // top: hot magenta (1.0, 0.25, 0.85) — bottom: bright cyan (0.15, 0.95, 1.0)
+    col[i * 3] = 1.0 - t * 0.85;
+    col[i * 3 + 1] = 0.25 + t * 0.7;
+    col[i * 3 + 2] = 0.85 + t * 0.15;
+    // Sprinkle a little randomness so it doesn't band
+    const j = (v[i] - 0.5) * 0.1;
+    col[i * 3] = Math.min(1, Math.max(0, col[i * 3] + j));
   }
   return col;
 }
 
-function colorColumn(N: number, r: Float32Array) {
+function colorColumn(N: number, v: Float32Array, r: Float32Array) {
+  // Cascade colour — pink at the top, magenta in the middle, electric blue at
+  // the bottom. v is the vertical seed (used by buildColumn).
   const col = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) {
-    const t = r[i];
-    col[i * 3] = 0.3 + t * 0.45;
-    col[i * 3 + 1] = 0.5 + (1 - t) * 0.3;
-    col[i * 3 + 2] = 1.0;
+    const t = v[i]; // 0..1 along height
+    const jitter = (r[i] - 0.5) * 0.2;
+    // Three-stop gradient: pink (1.0, 0.4, 0.9) → magenta (0.8, 0.25, 1.0) → cyan (0.2, 0.85, 1.0)
+    let R, G, B;
+    if (t < 0.5) {
+      const lt = t * 2;
+      R = 1.0 + (0.8 - 1.0) * lt;
+      G = 0.4 + (0.25 - 0.4) * lt;
+      B = 0.9 + (1.0 - 0.9) * lt;
+    } else {
+      const lt = (t - 0.5) * 2;
+      R = 0.8 + (0.2 - 0.8) * lt;
+      G = 0.25 + (0.85 - 0.25) * lt;
+      B = 1.0;
+    }
+    col[i * 3] = Math.min(1, Math.max(0, R + jitter));
+    col[i * 3 + 1] = Math.min(1, Math.max(0, G + jitter));
+    col[i * 3 + 2] = Math.min(1, Math.max(0, B + jitter));
   }
   return col;
 }
 
-function colorNebula(N: number, u: Float32Array) {
+function colorNebula(N: number, u: Float32Array, r: Float32Array) {
+  // Teal/cyan dominant flow with hot pink accents — matches FLOW reel.
   const col = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) {
     const t = u[i];
-    col[i * 3] = 0.2 + (1 - t) * 0.4;
-    col[i * 3 + 1] = 0.5 + (1 - t) * 0.3;
-    col[i * 3 + 2] = 1.0;
+    const accent = r[i] > 0.85 ? 1 : 0; // 15% of particles are pink accents
+    if (accent) {
+      col[i * 3] = 1.0;
+      col[i * 3 + 1] = 0.35;
+      col[i * 3 + 2] = 0.8;
+    } else {
+      col[i * 3] = 0.15 + (1 - t) * 0.25;
+      col[i * 3 + 1] = 0.7 + (1 - t) * 0.3;
+      col[i * 3 + 2] = 1.0;
+    }
   }
   return col;
 }
 
 function colorWave(N: number, u: Float32Array) {
+  // VOYAGE reel — bright electric blue on the left sweeping through magenta to
+  // hot red on the right. Very saturated.
   const col = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) {
     const t = u[i];
-    col[i * 3] = 0.25 + t * 0.7;
-    col[i * 3 + 1] = 0.4 - t * 0.2;
-    col[i * 3 + 2] = 1.0 - t * 0.3;
+    // 3-stop: blue (0.15, 0.55, 1.0) → magenta (1.0, 0.25, 0.95) → red (1.0, 0.35, 0.45)
+    let R, G, B;
+    if (t < 0.5) {
+      const lt = t * 2;
+      R = 0.15 + (1.0 - 0.15) * lt;
+      G = 0.55 + (0.25 - 0.55) * lt;
+      B = 1.0 + (0.95 - 1.0) * lt;
+    } else {
+      const lt = (t - 0.5) * 2;
+      R = 1.0;
+      G = 0.25 + (0.35 - 0.25) * lt;
+      B = 0.95 + (0.45 - 0.95) * lt;
+    }
+    col[i * 3] = R;
+    col[i * 3 + 1] = G;
+    col[i * 3 + 2] = B;
   }
   return col;
 }
 
 function colorSpiral(N: number, u: Float32Array) {
+  // Galaxy core: hot white-pink core fading to electric violet at the arms.
   const col = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) {
-    const t = u[i];
-    col[i * 3] = 0.85 + t * 0.15;
-    col[i * 3 + 1] = 0.55 + (1 - t) * 0.4;
-    col[i * 3 + 2] = 0.95;
+    const t = u[i]; // 0 at center, 1 at arm tip
+    col[i * 3] = 1.0 - t * 0.4; // white-pink → violet
+    col[i * 3 + 1] = 0.55 - t * 0.3;
+    col[i * 3 + 2] = 0.95 + (1 - t) * 0.05;
   }
   return col;
 }
@@ -538,11 +678,12 @@ function colorSpiral(N: number, u: Float32Array) {
 /* ── Tiny helpers ──────────────────────────────────────────────────────── */
 
 function ringSweep(t: number) {
+  // Vivid 4-stop sweep matching the COSMOS reel.
   const stops = [
-    { p: 0.0, c: [0.2, 0.7, 1.0] },
-    { p: 0.33, c: [0.9, 0.3, 1.0] },
-    { p: 0.66, c: [0.4, 0.4, 1.0] },
-    { p: 1.0, c: [0.2, 0.7, 1.0] },
+    { p: 0.0, c: [0.15, 0.85, 1.0] }, // electric cyan
+    { p: 0.33, c: [1.0, 0.3, 0.9] }, // hot magenta
+    { p: 0.66, c: [0.55, 0.25, 1.0] }, // violet
+    { p: 1.0, c: [0.15, 0.85, 1.0] }, // wrap back to cyan
   ];
   for (let i = 0; i < stops.length - 1; i++) {
     const a = stops[i];
@@ -561,6 +702,12 @@ function ringSweep(t: number) {
 
 function easeInOutCubic(t: number) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+/** Bell weight for "how much are we currently in shape `shapeIdx`?". */
+function shapeWeight(morphIdx: number, shapeIdx: number) {
+  const d = morphIdx - shapeIdx;
+  return Math.max(0, 1 - Math.abs(d));
 }
 
 function makeCircleTexture(): THREE.Texture {
