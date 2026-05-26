@@ -85,6 +85,7 @@ export default function CosmicBackground() {
     });
 
     const circleSprite = makeCircleTexture();
+    const haloSprite = makeHaloTexture();
     const glowSprite = makeGlowTexture();
 
     // ── 1. Starfield (deep background, camera flies through it) ─────────────
@@ -190,23 +191,48 @@ export default function CosmicBackground() {
     featGeo.setAttribute("position", posAttr);
     featGeo.setAttribute("color", colAttr);
 
-    // Particles — small, with moderate opacity. Because the palettes use
-    // pure primary channels (R, G, B each at either 0 or 1), additive
-    // overlap of same-color particles preserves hue: red+red+red stays red
-    // instead of washing to salmon-white.
+    // Particles — tight bright sparks. Smaller particle size keeps each
+    // one as a punchy little dot of light (not a soft blob), and full
+    // opacity pushes the sprite's bright-core gradient through. Pure-primary
+    // colors keep hue stable when 2–3 overlap additively; the sprite halo
+    // gives bloom around bright zones.
     const featMat = new THREE.PointsMaterial({
-      size: 3.0,
+      size: 2.8,
       vertexColors: true,
       map: circleSprite,
       transparent: true,
-      opacity: 0.65,
+      opacity: 1.0,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
       sizeAttenuation: true,
     });
     themedMaterials.push(featMat);
+
+    // ── Halo layer ──────────────────────────────────────────────────────────
+    // Shares the same geometry (position + color attributes) as the core
+    // layer, so each particle automatically has BOTH a bright spark core
+    // AND a wider soft halo sitting underneath. Together they read as the
+    // reel-style "bright glowing star" instead of a flat dot.
+    const haloMat = new THREE.PointsMaterial({
+      size: 13,
+      vertexColors: true,
+      map: haloSprite,
+      transparent: true,
+      opacity: 0.5,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      sizeAttenuation: true,
+    });
+    themedMaterials.push(haloMat);
+    const halo = new THREE.Points(featGeo, haloMat);
     const feature = new THREE.Points(featGeo, featMat);
-    scene.add(feature);
+    // Both layers go inside a single Group so they share the same rotation
+    // transform — otherwise rotating only `feature` makes the halos lag
+    // behind the cores and the visuals separate.
+    const featureGroup = new THREE.Group();
+    featureGroup.add(halo); // halo first → cores render on top of halos
+    featureGroup.add(feature);
+    scene.add(featureGroup);
 
     // Apply current theme's blending mode now that all materials exist.
     applyThemeBlending();
@@ -308,11 +334,14 @@ export default function CosmicBackground() {
       const wNebula = shapeWeight(idx, 3);
       const wWave = shapeWeight(idx, 4);
 
-      const cascadeAmt = wColumn; // particles streaming downward in column
-      const nebulaAmt = wNebula; // particles drifting along the nebula trail
-      const waveAmt = wWave; // particles drifting through wave field
+      // Cascade disabled — the column shape is now a DNA helix, and adding
+      // a downward stream on top would smear the strand structure into a
+      // waterfall. Keep nebula / wave drifts since those shapes benefit.
+      const cascadeAmt = 0;
+      const nebulaAmt = wNebula;
+      const waveAmt = wWave;
 
-      const cascadeSpeed = 90; // px/sec
+      const cascadeSpeed = 0;
       const nebulaSpeed = 70;
 
       // Per-particle live wobble + per-shape flow — runs every frame.
@@ -321,11 +350,14 @@ export default function CosmicBackground() {
       // like traveling waves on a string. u[i] drives spatial waves along
       // the strand, v[i] drives strand-to-strand phase offset.
       // Amplitude is kept small so strands read as lines, not clouds.
+      // During the column (DNA) phase we damp wobble somewhat so the helix
+      // structure stays legible while still breathing slightly.
+      const wobDamp = 1 - wColumn * 0.4;
       for (let i = 0; i < N; i++) {
         const i3 = i * 3;
         const strandPhase = v[i] * 6.2831853 * 2;
         const wavePhase = u[i] * 6.2831853 * 3;
-        const wob = 2 + r[i] * 3;
+        const wob = (2 + r[i] * 3) * wobDamp;
         const wobX =
           Math.sin(time * 0.7 + strandPhase + wavePhase) * wob;
         const wobY =
@@ -370,14 +402,16 @@ export default function CosmicBackground() {
       // Whole-body rotation — base drift, plus extra spin during ring/spiral
       // phases (those shapes feel "alive" with orbit motion).
       const wSpiral = shapeWeight(idx, 5);
-      // Spin: faster for ring/spiral (orbital motion looks great), nearly
-      // stopped during column phase so the DNA helix structure is actually
-      // legible to the eye. Incremental so changes don't snap.
-      const spinSpeed =
-        0.06 + wRing * 0.18 + wSpiral * 0.22 - wColumn * 0.055;
+      // Spin: faster for ring/spiral, gentler during the DNA column phase
+      // so the helix structure is legible but still feels alive.
+      // Applied to the GROUP so cores + halos rotate together.
+      const baseSpin = 0.06 + wRing * 0.18 + wSpiral * 0.22;
+      const columnSpin = 0.07; // dedicated slow spin for DNA viewing
+      const spinSpeed = baseSpin * (1 - wColumn) + columnSpin * wColumn;
       rotY += dt * spinSpeed;
-      feature.rotation.y = rotY;
-      feature.rotation.x = Math.sin(time * 0.18) * 0.04;
+      featureGroup.rotation.y = rotY;
+      featureGroup.rotation.x =
+        Math.sin(time * 0.18) * 0.04 * (1 - wColumn * 0.6);
 
       // Core glow — pulses, brightest in ring + spiral phases
       const ringWeight = Math.max(0, 1 - Math.min(1, scrollProgress / 0.18));
@@ -388,14 +422,16 @@ export default function CosmicBackground() {
         coreMat.opacity =
           Math.max(ringWeight, spiralWeight) * 0.95 * pulse;
         starMat.opacity = 0.9;
-        featMat.opacity = 0.65;
+        featMat.opacity = 1.0;
+        haloMat.opacity = 0.5; // halo gives each particle real bloom
       } else {
         // Light mode: normal blending paints colored dots over white. We
         // need higher per-particle opacity (no additive accumulation) but
-        // hide the additive-only effects (stars / core glow).
+        // hide the additive-only effects (stars / core glow / halo).
         coreMat.opacity = 0;
         starMat.opacity = 0;
         featMat.opacity = 0.85;
+        haloMat.opacity = 0; // additive bloom doesn't work over white
       }
 
       renderer.render(scene, camera);
@@ -420,8 +456,10 @@ export default function CosmicBackground() {
       starMat.dispose();
       featGeo.dispose();
       featMat.dispose();
+      haloMat.dispose();
       coreMat.dispose();
       circleSprite.dispose();
+      haloSprite.dispose();
       glowSprite.dispose();
     };
   }, []);
@@ -511,46 +549,67 @@ function buildColumn(
   // v drives vertical position; each row gets its own rung, so rungs march
   // up the column at regular intervals (the classic ladder look).
   const pos = new Float32Array(N * 3);
-  const helixR = 140; // radius from center axis to strand — large enough
-  // that the two strands are visually separated, not merged.
-  const helixTurns = 1.8; // fewer turns = each loop is taller and easier to
-  // read as a helix, not a fuzzy column.
-  const height = 720;
+  const helixR = 105; // distance from center axis to strand centerline
+  const helixTurns = 2.5;
+  const height = 740;
+  const ROW_SPREAD = 0.028;
+  const TUBE_R = 12; // strand cross-section thickness — gives each strand volume
+  const RUNG_THICK = 10; // rung vertical thickness
+  const A_END = 0.3;
+  const B_START = 0.7;
   for (let i = 0; i < N; i++) {
     const i3 = i * 3;
-    if (u[i] < 0.4) {
-      // Strand A. We use a sub-u to spread this row's particles slightly
-      // along the strand so neighbouring rows blend into a continuous tube.
-      const subU = u[i] / 0.4; // 0..1
-      const t = v[i] + (subU - 0.5) * 0.05; // along-helix parameter
+    // Decoupled pseudo-random pair from r[i] — used for tube cross-section
+    // (angle around the strand axis + distance from it). Without this, all
+    // particles in a row collapse onto a single line; with it, the strand
+    // gets actual cross-section volume.
+    const tubeAngle = r[i] * Math.PI * 2;
+    const tubeDist =
+      TUBE_R * Math.sqrt((r[i] * 7.31) - Math.floor(r[i] * 7.31));
+
+    if (u[i] < A_END) {
+      const subU = u[i] / A_END;
+      const t = v[i] + (subU - 0.5) * ROW_SPREAD;
       const h = (t - 0.5) * height;
       const twist = t * helixTurns * Math.PI * 2;
-      const radius = helixR + (r[i] - 0.5) * 5;
-      pos[i3] = Math.cos(twist) * radius;
-      pos[i3 + 1] = h;
-      pos[i3 + 2] = Math.sin(twist) * radius;
-    } else if (u[i] < 0.6) {
-      // Rung — linear interpolation from strand A to strand B at this height.
-      const rungT = (u[i] - 0.4) / 0.2; // 0..1
+      // Strand center
+      const cx = Math.cos(twist) * helixR;
+      const cz = Math.sin(twist) * helixR;
+      // Cross-section offset (radial outward + vertical), gives the strand volume
+      const dx = Math.cos(tubeAngle) * tubeDist * Math.cos(twist);
+      const dy = Math.sin(tubeAngle) * tubeDist;
+      const dz = Math.cos(tubeAngle) * tubeDist * Math.sin(twist);
+      pos[i3] = cx + dx;
+      pos[i3 + 1] = h + dy;
+      pos[i3 + 2] = cz + dz;
+    } else if (u[i] < B_START) {
+      // Rung — connects strand A to strand B at this height.
+      const rungT = (u[i] - A_END) / (B_START - A_END);
       const h = (v[i] - 0.5) * height;
       const twist = v[i] * helixTurns * Math.PI * 2;
       const ax = Math.cos(twist) * helixR;
       const az = Math.sin(twist) * helixR;
       const bx = Math.cos(twist + Math.PI) * helixR;
       const bz = Math.sin(twist + Math.PI) * helixR;
-      pos[i3] = ax + (bx - ax) * rungT;
-      pos[i3 + 1] = h + (r[i] - 0.5) * 4;
-      pos[i3 + 2] = az + (bz - az) * rungT;
+      // Vertical + perpendicular thickness so the rung reads as a chunky
+      // crossbar, not a hairline.
+      const perpScale = (tubeDist / TUBE_R - 0.5) * 8;
+      pos[i3] = ax + (bx - ax) * rungT - Math.sin(twist) * perpScale;
+      pos[i3 + 1] = h + (r[i] - 0.5) * RUNG_THICK;
+      pos[i3 + 2] = az + (bz - az) * rungT + Math.cos(twist) * perpScale;
     } else {
-      // Strand B — same as A but offset by π so it spirals on the opposite side.
-      const subU = (u[i] - 0.6) / 0.4; // 0..1
-      const t = v[i] + (subU - 0.5) * 0.05;
+      const subU = (u[i] - B_START) / (1 - B_START);
+      const t = v[i] + (subU - 0.5) * ROW_SPREAD;
       const h = (t - 0.5) * height;
       const twist = t * helixTurns * Math.PI * 2 + Math.PI;
-      const radius = helixR + (r[i] - 0.5) * 5;
-      pos[i3] = Math.cos(twist) * radius;
-      pos[i3 + 1] = h;
-      pos[i3 + 2] = Math.sin(twist) * radius;
+      const cx = Math.cos(twist) * helixR;
+      const cz = Math.sin(twist) * helixR;
+      const dx = Math.cos(tubeAngle) * tubeDist * Math.cos(twist);
+      const dy = Math.sin(tubeAngle) * tubeDist;
+      const dz = Math.cos(tubeAngle) * tubeDist * Math.sin(twist);
+      pos[i3] = cx + dx;
+      pos[i3 + 1] = h + dy;
+      pos[i3 + 2] = cz + dz;
     }
   }
   return pos;
@@ -867,6 +926,8 @@ function shapeWeight(morphIdx: number, shapeIdx: number) {
 }
 
 function makeCircleTexture(): THREE.Texture {
+  // Tight bright "spark" sprite — the bright punchy core of each particle.
+  // Paired with the wider halo sprite below to produce per-particle bloom.
   const size = 64;
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = size;
@@ -879,9 +940,38 @@ function makeCircleTexture(): THREE.Texture {
     size / 2,
     size / 2
   );
-  grad.addColorStop(0, "rgba(255,255,255,1)");
-  grad.addColorStop(0.35, "rgba(255,255,255,0.55)");
-  grad.addColorStop(1, "rgba(255,255,255,0)");
+  grad.addColorStop(0.0, "rgba(255,255,255,1.0)");
+  grad.addColorStop(0.25, "rgba(255,255,255,0.9)");
+  grad.addColorStop(0.55, "rgba(255,255,255,0.35)");
+  grad.addColorStop(1.0, "rgba(255,255,255,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/** Wide soft halo sprite — drawn as a separate Points layer behind the
+ * spark layer so each particle is core + halo, like a glowing star. */
+function makeHaloTexture(): THREE.Texture {
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  const grad = ctx.createRadialGradient(
+    size / 2,
+    size / 2,
+    0,
+    size / 2,
+    size / 2,
+    size / 2
+  );
+  // Brighter, more sustained falloff than the spark — this is the glow.
+  grad.addColorStop(0.0, "rgba(255,255,255,1.0)");
+  grad.addColorStop(0.2, "rgba(255,255,255,0.55)");
+  grad.addColorStop(0.5, "rgba(255,255,255,0.18)");
+  grad.addColorStop(0.85, "rgba(255,255,255,0.03)");
+  grad.addColorStop(1.0, "rgba(255,255,255,0)");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, size, size);
   const tex = new THREE.CanvasTexture(canvas);
