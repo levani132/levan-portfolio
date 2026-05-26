@@ -133,11 +133,13 @@ body {
 .glass-card {
   position: relative;
   isolation: isolate; /* contain ::before stacking */
-  /* Match the header treatment: heavier blur + saturation + contrast so
-     the cosmos behind reads as vivid frost through the glass. */
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(32px) saturate(220%) contrast(110%);
-  -webkit-backdrop-filter: blur(32px) saturate(220%) contrast(110%);
+  /* Dark-mode default: BLACK tint, not white. White text needs a dark card
+     behind it for contrast — a white-tinted glass over a black/cosmic page
+     would actually wash text out. The bright inset rim highlights below
+     still give it the "glass piece catching light" feel. */
+  background: #000000cb;
+  backdrop-filter: blur(40px) saturate(180%) contrast(105%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%) contrast(105%);
   /* Layered shadows — same recipe as the header pill: long soft drop
      for floating depth, tight drop for definition, bright top inset
      highlight, soft bottom inset, and a 1px inner ring as the edge. */
@@ -198,7 +200,8 @@ body {
 }
 
 .glass-card:hover {
-  background: rgba(255, 255, 255, 0.1);
+  /* Slightly less dark on hover + sky-tinted ring glow */
+  background: rgba(15, 30, 55, 0.78);
   box-shadow:
     0 18px 56px -14px rgba(56, 189, 248, 0.35),
     0 2px 8px rgba(0, 0, 0, 0.25),
@@ -218,7 +221,7 @@ body {
 }
 /* Slightly stronger glass when the nav has been scrolled past the hero */
 .nav-pill-scrolled {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.5);
 }
 :root:not(.dark) .nav-pill-scrolled {
   background: rgba(255, 255, 255, 0.75);

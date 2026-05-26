@@ -214,11 +214,14 @@ export default function CosmicBackground() {
     // AND a wider soft halo sitting underneath. Together they read as the
     // reel-style "bright glowing star" instead of a flat dot.
     const haloMat = new THREE.PointsMaterial({
-      size: 13,
+      // Bigger radius spreads each particle's glow further into a soft bloom.
+      // We compensate by lowering opacity so the total light per particle
+      // stays similar — wider but gentler, not wider AND brighter.
+      size: 22,
       vertexColors: true,
       map: haloSprite,
       transparent: true,
-      opacity: 0.5,
+      opacity: 0.22,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
       sizeAttenuation: true,
@@ -423,7 +426,7 @@ export default function CosmicBackground() {
           Math.max(ringWeight, spiralWeight) * 0.95 * pulse;
         starMat.opacity = 0.9;
         featMat.opacity = 1.0;
-        haloMat.opacity = 0.5; // halo gives each particle real bloom
+        haloMat.opacity = 0.22; // wider radius, gentler intensity
       } else {
         // Light mode: normal blending paints colored dots over white. We
         // need higher per-particle opacity (no additive accumulation) but
