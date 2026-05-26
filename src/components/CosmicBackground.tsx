@@ -257,6 +257,9 @@ export default function CosmicBackground() {
     const clock = new THREE.Clock();
     let rafId = 0;
     let time = 0;
+    // Accumulated rotation — incremental so we can vary the rate per shape
+    // without the rotation snapping back to time*speed when speed changes.
+    let rotY = 0;
 
     const render = () => {
       const dt = Math.min(0.05, clock.getDelta() || 0.016);
@@ -367,8 +370,13 @@ export default function CosmicBackground() {
       // Whole-body rotation — base drift, plus extra spin during ring/spiral
       // phases (those shapes feel "alive" with orbit motion).
       const wSpiral = shapeWeight(idx, 5);
-      const spinBoost = wRing * 0.18 + wSpiral * 0.22;
-      feature.rotation.y = time * (0.06 + spinBoost);
+      // Spin: faster for ring/spiral (orbital motion looks great), nearly
+      // stopped during column phase so the DNA helix structure is actually
+      // legible to the eye. Incremental so changes don't snap.
+      const spinSpeed =
+        0.06 + wRing * 0.18 + wSpiral * 0.22 - wColumn * 0.055;
+      rotY += dt * spinSpeed;
+      feature.rotation.y = rotY;
       feature.rotation.x = Math.sin(time * 0.18) * 0.04;
 
       // Core glow — pulses, brightest in ring + spiral phases
@@ -503,8 +511,10 @@ function buildColumn(
   // v drives vertical position; each row gets its own rung, so rungs march
   // up the column at regular intervals (the classic ladder look).
   const pos = new Float32Array(N * 3);
-  const helixR = 80; // radius from center axis to strand
-  const helixTurns = 3.0; // full twists from bottom to top
+  const helixR = 140; // radius from center axis to strand — large enough
+  // that the two strands are visually separated, not merged.
+  const helixTurns = 1.8; // fewer turns = each loop is taller and easier to
+  // read as a helix, not a fuzzy column.
   const height = 720;
   for (let i = 0; i < N; i++) {
     const i3 = i * 3;
