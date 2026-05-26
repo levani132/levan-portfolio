@@ -78,7 +78,7 @@ export default function Projects() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: idx * 0.15 }}
-              className="group relative overflow-hidden rounded-2xl border border-zinc-200 bg-white p-8 transition-all hover:border-sky-500/30 hover:shadow-2xl hover:shadow-sky-500/10 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-sky-500/30"
+              className="glass-card group relative overflow-hidden rounded-2xl p-8"
             >
               {/* Gradient overlay */}
               <div

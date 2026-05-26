@@ -122,6 +122,117 @@ body {
   animation: marquee 40s linear infinite;
 }
 
+/* ── Apple Liquid Glass utility classes ──────────────────────────────────
+ * Used across cards, pills, and the floating nav. Renders a very translucent
+ * frosted surface with a top-edge specular highlight, an inner ring, and a
+ * subtle bottom rim — the look of a piece of curved glass catching light.
+ *
+ * Apply to any element. Border-radius is inherited from the element itself,
+ * so the same class works on pills (rounded-full) and cards (rounded-2xl).
+ */
+.glass-card {
+  position: relative;
+  isolation: isolate; /* contain ::before stacking */
+  /* Match the header treatment: heavier blur + saturation + contrast so
+     the cosmos behind reads as vivid frost through the glass. */
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(32px) saturate(220%) contrast(110%);
+  -webkit-backdrop-filter: blur(32px) saturate(220%) contrast(110%);
+  /* Layered shadows — same recipe as the header pill: long soft drop
+     for floating depth, tight drop for definition, bright top inset
+     highlight, soft bottom inset, and a 1px inner ring as the edge. */
+  box-shadow:
+    0 14px 48px -12px rgba(0, 0, 0, 0.6),
+    0 2px 8px rgba(0, 0, 0, 0.22),
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1.25px 0 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  transition: background 300ms ease, box-shadow 300ms ease,
+    transform 300ms ease;
+}
+
+.glass-card::before {
+  /* Four-layer specular treatment (same as the header):
+     1. Big radial top-center highlight
+     2. Razor-thin bright rim line along the very top edge
+     3. Soft blue-tinted rim along the bottom edge (curved-glass feel)
+     4. Faint vertical color bleed for body sheen */
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    /* Top rim line — very thin, very bright */
+    linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.55) 0,
+      rgba(255, 255, 255, 0.55) 1px,
+      transparent 1px,
+      transparent 100%
+    ),
+    /* Bottom rim — soft blue tint */
+    linear-gradient(
+      to top,
+      rgba(180, 210, 255, 0.3) 0,
+      rgba(180, 210, 255, 0.3) 1px,
+      transparent 1px,
+      transparent 100%
+    ),
+    /* Big top-center specular */
+    radial-gradient(
+      80% 100% at 50% 0%,
+      rgba(255, 255, 255, 0.4) 0%,
+      rgba(255, 255, 255, 0.1) 40%,
+      transparent 80%
+    ),
+    /* Subtle vertical body sheen */
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      transparent 30%,
+      transparent 70%,
+      rgba(255, 255, 255, 0.04) 100%
+    );
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 18px 56px -14px rgba(56, 189, 248, 0.35),
+    0 2px 8px rgba(0, 0, 0, 0.25),
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1.25px 0 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 0 1px rgba(56, 189, 248, 0.35);
+}
+
+/* Light-mode tweaks so the glass still reads when the page bg is white */
+:root:not(.dark) .glass-card {
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 8px 32px -10px rgba(15, 23, 42, 0.18),
+    0 2px 6px rgba(15, 23, 42, 0.06),
+    inset 0 1.25px 0 0 rgba(255, 255, 255, 0.8),
+    inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+}
+/* Slightly stronger glass when the nav has been scrolled past the hero */
+.nav-pill-scrolled {
+  background: rgba(255, 255, 255, 0.1);
+}
+:root:not(.dark) .nav-pill-scrolled {
+  background: rgba(255, 255, 255, 0.75);
+}
+
+:root:not(.dark) .glass-card:hover {
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 14px 44px -12px rgba(14, 165, 233, 0.28),
+    0 2px 8px rgba(15, 23, 42, 0.08),
+    inset 0 1.25px 0 0 rgba(255, 255, 255, 0.9),
+    inset 0 0 0 1px rgba(14, 165, 233, 0.3);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

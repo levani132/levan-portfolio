@@ -113,8 +113,8 @@ function JobCard({ job, index }: { job: Job; index: number }) {
 
       <div className="relative flex gap-6">
         {/* Timeline dot */}
-        <div className="relative z-10 mt-1.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-sky-500/30 bg-white dark:bg-zinc-950">
-          <Building2 size={16} className="text-sky-500" />
+        <div className="glass-card relative z-10 mt-1.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+          <Building2 size={16} className="text-sky-400" />
         </div>
 
         {/* Content card */}
@@ -123,7 +123,7 @@ function JobCard({ job, index }: { job: Job; index: number }) {
             onClick={() => setExpanded(!expanded)}
             className="w-full text-left"
           >
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 transition-all hover:border-sky-500/30 hover:shadow-lg hover:shadow-sky-500/5 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-sky-500/30">
+            <div className="glass-card rounded-2xl p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="text-sm font-medium text-sky-500">

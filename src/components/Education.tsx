@@ -62,7 +62,7 @@ export default function Education() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
               transition={{ duration: 0.5, delay: i * 0.15 }}
-              className="group relative overflow-hidden rounded-2xl border border-zinc-200 bg-white p-6 transition-all hover:border-sky-500/30 hover:shadow-lg hover:shadow-sky-500/5 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-sky-500/30"
+              className="glass-card group relative overflow-hidden rounded-2xl p-6"
             >
               {/* Gradient accent */}
               <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-sky-500/5 transition-all group-hover:bg-sky-500/10" />

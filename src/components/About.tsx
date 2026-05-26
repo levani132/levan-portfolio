@@ -81,7 +81,7 @@ export default function About() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
               transition={{ duration: 0.4, delay: i * 0.08 }}
-              className={`group rounded-2xl border border-zinc-200 bg-white p-6 transition-all hover:border-sky-500/30 hover:shadow-lg hover:shadow-sky-500/5 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-sky-500/30 ${card.span}`}
+              className={`glass-card group rounded-2xl p-6 ${card.span}`}
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/10 text-sky-500 transition-colors group-hover:bg-sky-500/20">
                 <card.icon size={20} />

@@ -19,13 +19,13 @@ export default function Footer() {
           </div>
           <div className="flex gap-8 text-sm text-zinc-500 dark:text-zinc-400">
             <a
-              href="mailto:levan@example.com"
+              href="mailto:lberoshvili9@gmail.com"
               className="transition-colors hover:text-sky-500"
             >
               Email
             </a>
             <a
-              href="https://linkedin.com/in/"
+              href="https://www.linkedin.com/in/levan-beroshvili-75753a110/"
               target="_blank"
               rel="noopener noreferrer"
               className="transition-colors hover:text-sky-500"
@@ -33,7 +33,7 @@ export default function Footer() {
               LinkedIn
             </a>
             <a
-              href="https://github.com/"
+              href="https://github.com/levani132"
               target="_blank"
               rel="noopener noreferrer"
               className="transition-colors hover:text-sky-500"

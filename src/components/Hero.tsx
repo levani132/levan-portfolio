@@ -266,9 +266,15 @@ export default function Hero() {
       <InteractiveDotGrid />
 
       <div className="relative z-10 mx-auto max-w-5xl text-center">
-        {/* Status badge */}
+        {/* Status badge — glassy with sky-blue tint */}
         <div className="hero-entrance hero-delay-0">
-          <span className="inline-flex items-center gap-2 rounded-full border border-sky-500/20 bg-sky-500/10 px-4 py-1.5 text-sm text-sky-600 dark:text-sky-400">
+          <span
+            className="glass-card inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium text-sky-700 dark:text-sky-300"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(56,189,248,0.22), rgba(14,165,233,0.14))",
+            }}
+          >
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-sky-500" />
@@ -319,7 +325,7 @@ export default function Hero() {
           {stats.map((stat) => (
             <div
               key={stat.label}
-              className="group rounded-2xl border border-zinc-200 bg-white/50 p-4 backdrop-blur-sm transition-all hover:border-sky-500/30 hover:shadow-lg hover:shadow-sky-500/5 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-sky-500/30"
+              className="glass-card group rounded-2xl p-4"
             >
               <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
                 <AnimatedCounter target={stat.value} suffix={stat.suffix} />
@@ -336,24 +342,24 @@ export default function Hero() {
           className="hero-entrance-fade hero-delay-900 mt-10 flex items-center justify-center gap-4"
         >
           <a
-            href="mailto:levan@example.com"
-            className="flex items-center gap-2 rounded-full border border-zinc-200 px-5 py-2.5 text-sm font-medium text-zinc-700 transition-all hover:border-sky-500/50 hover:bg-sky-500/10 hover:text-sky-600 dark:border-zinc-800 dark:text-zinc-300 dark:hover:border-sky-500/50 dark:hover:text-sky-400"
+            href="mailto:lberoshvili9@gmail.com"
+            className="glass-card flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:text-sky-500 dark:text-zinc-200 dark:hover:text-sky-300"
           >
             <Mail size={16} /> {t("hero.getInTouch")}
           </a>
           <a
-            href="https://linkedin.com/in/"
+            href="https://www.linkedin.com/in/levan-beroshvili-75753a110/"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full border border-zinc-200 p-2.5 text-zinc-500 transition-all hover:border-sky-500/50 hover:bg-sky-500/10 hover:text-sky-600 dark:border-zinc-800 dark:hover:border-sky-500/50 dark:hover:text-sky-400"
+            className="glass-card rounded-full p-2.5 text-zinc-600 transition-colors hover:text-sky-500 dark:text-zinc-300 dark:hover:text-sky-300"
           >
             <Linkedin size={18} />
           </a>
           <a
-            href="https://github.com/"
+            href="https://github.com/levani132"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full border border-zinc-200 p-2.5 text-zinc-500 transition-all hover:border-sky-500/50 hover:bg-sky-500/10 hover:text-sky-600 dark:border-zinc-800 dark:hover:border-sky-500/50 dark:hover:text-sky-400"
+            className="glass-card rounded-full p-2.5 text-zinc-600 transition-colors hover:text-sky-500 dark:text-zinc-300 dark:hover:text-sky-300"
           >
             <Github size={18} />
           </a>

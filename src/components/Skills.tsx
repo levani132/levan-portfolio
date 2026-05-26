@@ -160,14 +160,14 @@ export default function Skills() {
 
       {/* Marquee ticker */}
       <div className="relative mt-12">
-        <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-24 bg-linear-to-r from-white dark:from-zinc-950" />
-        <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-24 bg-linear-to-l from-white dark:from-zinc-950" />
+        <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-24 bg-linear-to-r from-white/80 to-transparent dark:from-black/70" />
+        <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-24 bg-linear-to-l from-white/80 to-transparent dark:from-black/70" />
         <div className="flex overflow-hidden">
           <div className="animate-marquee flex shrink-0 items-center gap-4 pr-4">
             {[...allTech, ...allTech].map((tech, i) => (
               <span
                 key={`${tech}-${i}`}
-                className="whitespace-nowrap rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
+                className="glass-card whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-200"
               >
                 {tech}
               </span>
@@ -186,7 +186,7 @@ export default function Skills() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
               transition={{ duration: 0.4, delay: i * 0.08 }}
-              className="rounded-2xl border border-zinc-200 bg-white p-5 transition-all hover:border-sky-500/30 hover:shadow-lg hover:shadow-sky-500/5 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-sky-500/30"
+              className="glass-card rounded-2xl p-5"
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-500/10 text-sky-500">
@@ -200,7 +200,7 @@ export default function Skills() {
                 {cat.items.map((item) => (
                   <span
                     key={item}
-                    className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                    className="rounded-full bg-white/5 px-3 py-1 text-xs font-medium text-zinc-600 ring-1 ring-inset ring-white/10 dark:text-zinc-300"
                   >
                     {item}
                   </span>
