@@ -38,7 +38,6 @@ export default function CosmicBackground() {
 
     let w = window.innerWidth;
     let h = window.innerHeight;
-    const isSmall = w < 700;
 
     // ── Renderer ────────────────────────────────────────────────────────────
     const renderer = new THREE.WebGLRenderer({
@@ -89,7 +88,7 @@ export default function CosmicBackground() {
     const glowSprite = makeGlowTexture();
 
     // ── 1. Starfield (deep background, camera flies through it) ─────────────
-    const STAR_COUNT = isSmall ? 1500 : 3500;
+    const STAR_COUNT = 3500;
     const TUNNEL_LEN = 2400;
     const starGeo = new THREE.BufferGeometry();
     const starPos = new Float32Array(STAR_COUNT * 3);
@@ -145,8 +144,8 @@ export default function CosmicBackground() {
     //   u[i] = position along its strand   (0..1)
     //   v[i] = which strand                 (0..1)
     //   r[i] = random jitter (stable per particle)
-    const NUM_U = isSmall ? 110 : 200;
-    const NUM_V = isSmall ? 28 : 42;
+    const NUM_U = 200;
+    const NUM_V = 42;
     const N = NUM_U * NUM_V; // 3080 mobile, 8400 desktop
 
     const u = new Float32Array(N);
