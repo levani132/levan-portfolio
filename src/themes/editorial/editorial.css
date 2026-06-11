@@ -1,0 +1,228 @@
+/* ── EDITORIAL — brutalist ink & acid theme ───────────────────────────────
+ * Massive display typography (Anton), near-black paper, acid-yellow ink.
+ * Scoped under .theme-editorial.
+ */
+
+.theme-editorial {
+  --ed-bg: #0c0c0c;
+  --ed-ink: #f1ede4;
+  --ed-acid: #d9ff3d;
+  --ed-line: #2c2c2c;
+  --ed-dim: #8d887d;
+
+  background: var(--ed-bg);
+  color: var(--ed-ink);
+  min-height: 100vh;
+  overflow-x: clip;
+}
+
+@media (pointer: fine) {
+  .theme-editorial,
+  .theme-editorial a,
+  .theme-editorial button {
+    cursor: none;
+  }
+}
+
+.theme-editorial ::selection {
+  background: var(--ed-acid);
+  color: #000;
+}
+
+/* Display face */
+.ed-display {
+  font-family: var(--font-anton), Impact, "Arial Narrow", sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  line-height: 0.88;
+  letter-spacing: 0.01em;
+}
+
+.ed-outline {
+  color: transparent;
+  -webkit-text-stroke: 1.5px var(--ed-ink);
+}
+
+.ed-outline-acid {
+  color: transparent;
+  -webkit-text-stroke: 1.5px var(--ed-acid);
+}
+
+.ed-mono {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* ── Custom cursor ── */
+.ed-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 200;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: var(--ed-acid);
+  mix-blend-mode: difference;
+  pointer-events: none;
+}
+
+@media (pointer: coarse) {
+  .ed-cursor {
+    display: none;
+  }
+}
+
+/* ── Marquee strips ── */
+.ed-marquee {
+  display: flex;
+  overflow: hidden;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.ed-marquee-track {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  animation: ed-marquee 28s linear infinite;
+}
+
+.ed-marquee-track.rev {
+  animation-name: ed-marquee-rev;
+}
+
+@keyframes ed-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes ed-marquee-rev {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ed-marquee-track {
+    animation: none;
+  }
+}
+
+/* Acid banner strip */
+.ed-strip {
+  background: var(--ed-acid);
+  color: #000;
+  transform: rotate(-1.6deg) scale(1.04);
+}
+
+/* ── Interactive rows (experience / education) ── */
+.ed-row {
+  border-top: 1px solid var(--ed-line);
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.ed-row:last-child {
+  border-bottom: 1px solid var(--ed-line);
+}
+
+.ed-row:hover {
+  background: var(--ed-acid);
+  color: #000;
+}
+
+.ed-row:hover .ed-dim-text {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.ed-dim-text {
+  color: var(--ed-dim);
+  transition: color 180ms ease;
+}
+
+.ed-row .ed-arrow {
+  transition: transform 220ms ease;
+}
+
+.ed-row:hover .ed-arrow {
+  transform: rotate(45deg) scale(1.3);
+}
+
+/* ── Project cards ── */
+.ed-project {
+  border: 1px solid var(--ed-line);
+  transition: background 220ms ease, color 220ms ease, border-color 220ms ease;
+}
+
+.ed-project:hover {
+  background: var(--ed-ink);
+  color: #000;
+  border-color: var(--ed-ink);
+}
+
+.ed-project:hover .ed-dim-text {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.ed-project:hover .ed-proj-arrow {
+  transform: rotate(45deg);
+  color: #000;
+}
+
+.ed-proj-arrow {
+  transition: transform 260ms ease, color 260ms ease;
+  color: var(--ed-acid);
+}
+
+/* ── Giant footer CTA ── */
+.ed-cta {
+  display: block;
+  text-decoration: none;
+  color: transparent;
+  -webkit-text-stroke: 2px var(--ed-acid);
+  transition: color 240ms ease;
+}
+
+.ed-cta:hover {
+  color: var(--ed-acid);
+}
+
+/* Header */
+.ed-header {
+  mix-blend-mode: difference;
+}
+
+.ed-header a {
+  color: var(--ed-ink);
+  text-decoration: none;
+}
+
+.ed-header a:hover {
+  color: var(--ed-acid);
+}
+
+/* Big section index numbers */
+.ed-index {
+  color: var(--ed-acid);
+}
+
+/* Grain reuse-friendly noise for this theme too */
+.theme-editorial .ed-noise {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 90;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}

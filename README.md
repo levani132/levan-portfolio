@@ -1,5 +1,24 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Themes
+
+The site ships **three complete, visually unrelated designs**. Pick one at
+build time with the `NEXT_PUBLIC_THEME` env var (see `.env.example`):
+
+| Theme       | Look                                                                  |
+| ----------- | --------------------------------------------------------------------- |
+| `cosmic`    | (default) iOS liquid glass + 8,400 morphing WebGL particles, comets   |
+| `terminal`  | Interactive retro CRT shell — boots, then takes real commands (`help`, `neofetch`, `sudo hire-me`…) |
+| `editorial` | Brutalist ink & acid — giant Anton typography, marquees, hover-invert |
+
+```bash
+# e.g. run the terminal design locally
+NEXT_PUBLIC_THEME=terminal npm run dev
+```
+
+On Vercel, set `NEXT_PUBLIC_THEME` in Project Settings → Environment Variables
+and redeploy to switch the live design.
+
 ## Getting Started
 
 First, run the development server:

@@ -1,0 +1,299 @@
+/* ── levan_os CRT terminal theme ──────────────────────────────────────────
+ * Scoped under .theme-terminal so it can coexist with the other themes'
+ * global styles. Phosphor green on near-black, scanlines, flicker, glow.
+ */
+
+.theme-terminal {
+  --crt-bg: #050a06;
+  --crt-green: #4afa7b;
+  --crt-green-dim: #2c9650;
+  --crt-green-faint: #1a5731;
+  --crt-amber: #ffb347;
+  --crt-cyan: #5ce8e3;
+  --crt-red: #ff5f56;
+  --crt-white: #d9ffe6;
+
+  position: fixed;
+  inset: 0;
+  background: var(--crt-bg);
+  color: var(--crt-green);
+  font-family: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo,
+    monospace;
+  font-size: 14px;
+  line-height: 1.55;
+  overflow: hidden;
+  cursor: text;
+}
+
+/* Phosphor glow on all text */
+.theme-terminal {
+  text-shadow: 0 0 6px rgba(74, 250, 123, 0.55), 0 0 24px rgba(74, 250, 123, 0.18);
+}
+
+/* The scrollable screen area */
+.crt-screen {
+  position: absolute;
+  inset: 0;
+  padding: 56px clamp(16px, 5vw, 64px) 96px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--crt-green-faint) transparent;
+  /* Slight barrel-distortion illusion via inset shadow vignette */
+  z-index: 1;
+}
+
+/* ── CRT overlays ── */
+.crt-scanlines {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.22) 3px,
+    rgba(0, 0, 0, 0) 4px
+  );
+  mix-blend-mode: multiply;
+}
+
+.crt-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: radial-gradient(
+      ellipse at center,
+      transparent 55%,
+      rgba(0, 0, 0, 0.55) 100%
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(74, 250, 123, 0.04),
+      transparent 12%,
+      transparent 88%,
+      rgba(74, 250, 123, 0.04)
+    );
+}
+
+/* A slowly drifting brighter band, like an old tube refreshing */
+.crt-glowband {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 30vh;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(120, 255, 170, 0.045),
+    transparent
+  );
+  animation: crt-band 9s linear infinite;
+}
+
+@keyframes crt-band {
+  0% {
+    top: -30vh;
+  }
+  100% {
+    top: 100vh;
+  }
+}
+
+/* Whole-screen flicker — very subtle */
+@media (prefers-reduced-motion: no-preference) {
+  .crt-flicker {
+    animation: crt-flicker 4s steps(1) infinite;
+  }
+}
+
+@keyframes crt-flicker {
+  0%, 100% { opacity: 1; }
+  3% { opacity: 0.965; }
+  3.5% { opacity: 1; }
+  41% { opacity: 1; }
+  41.5% { opacity: 0.94; }
+  42% { opacity: 1; }
+  77% { opacity: 0.975; }
+  77.5% { opacity: 1; }
+}
+
+/* ── Top status bar ── */
+.crt-statusbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px clamp(16px, 5vw, 64px);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--crt-green-dim);
+  border-bottom: 1px solid rgba(74, 250, 123, 0.18);
+  background: rgba(5, 10, 6, 0.85);
+  backdrop-filter: blur(4px);
+  text-shadow: none;
+}
+
+.crt-statusbar .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.crt-statusbar a {
+  color: var(--crt-green-dim);
+  text-decoration: none;
+}
+
+.crt-statusbar a:hover,
+.crt-statusbar a.lang-active {
+  color: var(--crt-green);
+}
+
+/* ── Text roles ── */
+.crt-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 1.55em;
+}
+
+.crt-dim {
+  color: var(--crt-green-dim);
+  text-shadow: none;
+}
+
+.crt-amber {
+  color: var(--crt-amber);
+  text-shadow: 0 0 6px rgba(255, 179, 71, 0.5);
+}
+
+.crt-cyan {
+  color: var(--crt-cyan);
+  text-shadow: 0 0 6px rgba(92, 232, 227, 0.5);
+}
+
+.crt-white {
+  color: var(--crt-white);
+}
+
+.crt-banner {
+  color: var(--crt-green);
+  font-size: clamp(5px, 1.55vw, 13px);
+  line-height: 1.18;
+  text-shadow: 0 0 8px rgba(74, 250, 123, 0.65), 0 0 32px rgba(74, 250, 123, 0.25);
+}
+
+.theme-terminal a.crt-link {
+  color: var(--crt-cyan);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.theme-terminal a.crt-link:hover {
+  background: var(--crt-cyan);
+  color: var(--crt-bg);
+  text-shadow: none;
+}
+
+/* ── Prompt ── */
+.crt-prompt-user {
+  color: var(--crt-amber);
+}
+
+.crt-prompt-path {
+  color: var(--crt-cyan);
+}
+
+.crt-cursor {
+  display: inline-block;
+  width: 0.62em;
+  height: 1.18em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  background: var(--crt-green);
+  box-shadow: 0 0 8px rgba(74, 250, 123, 0.8);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .crt-cursor {
+    animation: crt-blink 1.06s steps(1) infinite;
+  }
+}
+
+@keyframes crt-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* Invisible input that captures keystrokes (and summons mobile keyboards) */
+.crt-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  border: 0;
+  padding: 0;
+}
+
+/* ── Command chips (discoverability / mobile) ── */
+.crt-chips {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px clamp(16px, 5vw, 64px) 14px;
+  border-top: 1px solid rgba(74, 250, 123, 0.18);
+  background: rgba(5, 10, 6, 0.88);
+  backdrop-filter: blur(4px);
+}
+
+.crt-chip {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 4px 12px;
+  color: var(--crt-green);
+  background: rgba(74, 250, 123, 0.06);
+  border: 1px solid rgba(74, 250, 123, 0.35);
+  border-radius: 2px;
+  cursor: pointer;
+  text-shadow: none;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.crt-chip:hover {
+  background: var(--crt-green);
+  color: var(--crt-bg);
+  box-shadow: 0 0 16px rgba(74, 250, 123, 0.5);
+}
+
+/* Tables (experience list, neofetch) */
+.crt-cols {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 2ch;
+}
+
+@media (max-width: 640px) {
+  .theme-terminal {
+    font-size: 12.5px;
+  }
+  .crt-banner {
+    font-size: 4.4px;
+  }
+}
