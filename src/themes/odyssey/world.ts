@@ -1,25 +1,29 @@
 /**
- * Odyssey world — a cinematic 3D night-world the camera travels through as
- * the page scrolls. Seven "stops", each themed to a chapter of the resume:
+ * Odyssey world — a daylit, scroll-cinematic 3D journey across a grassy
+ * valley. Seven stops, each themed to a resume chapter:
  *
- *   0  Neon sign        — LEVAN BEROSHVILI in glowing tubes over a grid floor
- *   1  Dev room         — desk, triple monitors full of code, lamp clicks on
- *   2  Server corridor  — camera flies between racks of blinking LEDs
- *   3  Guitar stage     — black Strat in a spotlight that snaps on
- *   4  Garage           — door tilts open, supercar headlights flare, underglow
- *   5  Snow slope       — Jones Frontier board, falling snow, aurora sky
- *   6  Rooftop          — pool, fireplace, helipad, city skyline below
+ *   0  Hillside letters   — giant white LEVAN / BEROSHVILI on the lawn
+ *   1  Garden dev studio  — pergola deck, triple monitors, striped sun shadows
+ *   2  Glass server hall  — racks of blinking LEDs behind reflective glass
+ *   3  Guitar deck        — black Strat + amp on a wooden stage
+ *   4  Garage             — the real car timeline; door tilts open in the sun
+ *   5  Snow field         — Jones Frontier board in real snow, falling flakes
+ *   6  Cliff villa        — infinity pool deck on a plateau, fire bowl, helipad
  *
- * Everything is procedural three.js primitives — no model files. Bloom makes
- * the emissive surfaces read as real light sources. Camera position/look-at
- * ride two Catmull-Rom curves; per-chapter smoothstep makes the camera dwell
- * at each stop while that chapter's content is on screen.
+ * Realism comes from light, not geometry: a real HDRI sky drives both the
+ * background and PBR reflections (clearcoat car paint, glass, water), a
+ * directional sun casts soft shadows everywhere and follows the camera so
+ * the 2k shadow map stays sharp, and the ground/snow/wood/concrete wear
+ * actual photo textures (CC0, Poly Haven). Geometry is still procedural.
  */
 
 import * as THREE from "three";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import { FontLoader } from "three/addons/loaders/FontLoader.js";
+import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
 
 export const CHAPTERS = 7;
 
@@ -27,33 +31,44 @@ const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
 /* Camera waypoints (one per chapter) and what the camera looks at there. */
 const CAM_POINTS = [
-  v(0, 4.6, 24),
+  v(0, 3.6, 22),
   v(-16, 3.2, -30),
-  v(8, 2.7, -84),
+  v(8, 2.9, -76),
   v(-16, 2.6, -120),
   v(14, 4.4, -152.5),
-  v(-16, 3.0, -209),
-  v(-3, 12.6, -253),
+  v(-16, 4.4, -209),
+  v(-4, 13.2, -253),
 ];
 const TARGET_POINTS = [
-  v(0, 6.0, 0),
+  v(0, 2.4, 0),
   v(-16, 1.9, -40),
-  v(8, 2.2, -100),
+  v(8, 2.0, -90),
   v(-16, 1.8, -130),
   v(14, 0.8, -174),
-  v(-16, 1.8, -221),
-  v(2, 10.8, -272),
+  v(-16, 2.6, -221),
+  v(2, 10.6, -271),
 ];
 
 const STOP = {
-  sign: v(0, 6, 0),
+  sign: v(0, 0, 0),
   dev: v(-16, 0, -40),
-  corridor: v(8, 0, -86),
+  corridor: v(8, 0, -88),
   guitar: v(-16, 0, -130),
   garage: v(14, 0, -175),
-  snow: v(-16, 0, -221),
-  roof: v(0, 10, -270),
+  snow: v(-16, 1.2, -221),
+  roof: v(0, 9, -270),
 };
+
+/* Flat pads carved into the rolling terrain, one per scene. */
+const PADS = [
+  { x: 0, z: 0, h: 0, r: 18 },
+  { x: -16, z: -40, h: 0, r: 14 },
+  { x: 8, z: -88, h: 0, r: 16 },
+  { x: -16, z: -130, h: 0, r: 13 },
+  { x: 14, z: -175, h: 0, r: 17 },
+  { x: -16, z: -221, h: 1.2, r: 17 },
+  { x: 0, z: -270, h: 9, r: 24 },
+];
 
 function clamp01(x: number) {
   return x < 0 ? 0 : x > 1 ? 1 : x;
@@ -63,15 +78,37 @@ function smoothstep(t: number) {
   return t * t * (3 - 2 * t);
 }
 
-/** 1 at the chapter, fading to 0 one chapter away. */
 function bell(f: number, i: number) {
   return Math.max(0, 1 - Math.abs(f - i));
 }
 
-/** Stepped pseudo-random flicker used when lights "switch on". */
 function flicker(time: number, seed: number) {
   const x = Math.sin(time * 31.7 + seed * 91.3) * 43758.5453;
   return x - Math.floor(x) > 0.42 ? 1 : 0.15;
+}
+
+/** Rolling-hills height field; amplitude grows toward the valley walls. */
+function hills(x: number, z: number) {
+  const base =
+    2.0 * Math.sin(x * 0.045) * Math.cos(z * 0.038) +
+    1.3 * Math.sin(x * 0.11 + 1.7) * Math.sin(z * 0.07) +
+    0.5 * Math.sin(x * 0.23) * Math.cos(z * 0.19);
+  const wall = 1 + clamp01((Math.abs(x) - 55) / 60) * 4.5;
+  return base * wall;
+}
+
+function terrainHeight(x: number, z: number) {
+  let padW = 0;
+  let padH = 0;
+  for (const p of PADS) {
+    const d = Math.hypot(x - p.x, z - p.z);
+    const t = smoothstep(clamp01(1 - d / (p.r * 2.1)));
+    if (t > padW) {
+      padW = t;
+      padH = p.h;
+    }
+  }
+  return hills(x, z) * (1 - padW) + padH * padW;
 }
 
 /* ── Canvas texture helpers ────────────────────────────────────────────── */
@@ -90,30 +127,9 @@ function canvasTexture(
   return tex;
 }
 
-function neonTextTexture(text: string, color: string) {
-  return canvasTexture(2048, 512, (ctx) => {
-    ctx.clearRect(0, 0, 2048, 512);
-    // Auto-fit: scale the font so the text spans ~88% of the canvas width
-    ctx.font = "bold 100px Arial, sans-serif";
-    const measured = ctx.measureText(text).width;
-    const size = Math.min(380, (100 * 2048 * 0.88) / measured);
-    ctx.font = `bold ${size}px Arial, sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 70;
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 8;
-    ctx.strokeText(text, 1024, 256);
-    ctx.shadowBlur = 28;
-    ctx.fillStyle = color;
-    ctx.fillText(text, 1024, 256);
-  });
-}
-
 function codeTexture(hue: number) {
   return canvasTexture(256, 160, (ctx) => {
-    ctx.fillStyle = "#0a0f14";
+    ctx.fillStyle = "#10151c";
     ctx.fillRect(0, 0, 256, 160);
     const colors = [
       `hsl(${hue}, 90%, 65%)`,
@@ -138,34 +154,14 @@ function codeTexture(hue: number) {
   });
 }
 
-function cityWindowsTexture() {
-  return canvasTexture(128, 256, (ctx) => {
-    ctx.fillStyle = "#06070c";
-    ctx.fillRect(0, 0, 128, 256);
-    for (let y = 6; y < 250; y += 12) {
-      for (let x = 6; x < 122; x += 10) {
-        if (Math.random() < 0.28) {
-          ctx.fillStyle =
-            Math.random() < 0.7
-              ? `rgba(255, 214, 140, ${0.5 + Math.random() * 0.5})`
-              : `rgba(150, 220, 255, ${0.4 + Math.random() * 0.5})`;
-          ctx.fillRect(x, y, 5, 7);
-        }
-      }
-    }
-  });
-}
-
 function boardTexture() {
   return canvasTexture(256, 1024, (ctx) => {
-    // Jones-Frontier-inspired: deep blue fading to ice with mountain band
     const grad = ctx.createLinearGradient(0, 0, 0, 1024);
     grad.addColorStop(0, "#0d1b3d");
     grad.addColorStop(0.55, "#1d3f6e");
     grad.addColorStop(1, "#cfe5f2");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 256, 1024);
-    // mountain silhouette band
     ctx.fillStyle = "#0a1530";
     ctx.beginPath();
     ctx.moveTo(0, 660);
@@ -189,29 +185,10 @@ function boardTexture() {
   });
 }
 
-function gridTexture() {
-  return canvasTexture(256, 256, (ctx) => {
-    ctx.fillStyle = "#07080d";
-    ctx.fillRect(0, 0, 256, 256);
-    ctx.strokeStyle = "rgba(80, 140, 255, 0.20)";
-    ctx.lineWidth = 1;
-    for (let i = 0; i <= 256; i += 32) {
-      ctx.beginPath();
-      ctx.moveTo(i, 0);
-      ctx.lineTo(i, 256);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(0, i);
-      ctx.lineTo(256, i);
-      ctx.stroke();
-    }
-  });
-}
-
 function helipadTexture() {
   return canvasTexture(256, 256, (ctx) => {
     ctx.clearRect(0, 0, 256, 256);
-    ctx.strokeStyle = "#ffd966";
+    ctx.strokeStyle = "#39424e";
     ctx.lineWidth = 10;
     ctx.beginPath();
     ctx.arc(128, 128, 100, 0, Math.PI * 2);
@@ -219,7 +196,7 @@ function helipadTexture() {
     ctx.font = "bold 130px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "#ffd966";
+    ctx.fillStyle = "#39424e";
     ctx.fillText("H", 128, 136);
   });
 }
@@ -259,17 +236,19 @@ function plateTexture(text: string) {
   });
 }
 
-/** Glowing floor plaque under each car in the garage timeline. */
+/** Painted floor plaque under each car. */
 function plaqueTexture(text: string) {
   return canvasTexture(256, 64, (ctx) => {
     ctx.clearRect(0, 0, 256, 64);
-    ctx.font = "bold 34px Arial";
+    ctx.fillStyle = "rgba(244, 246, 248, 0.9)";
+    ctx.beginPath();
+    ctx.roundRect(4, 6, 248, 52, 10);
+    ctx.fill();
+    ctx.font = "bold 30px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.shadowColor = "#7ad8ff";
-    ctx.shadowBlur = 18;
-    ctx.fillStyle = "#bfe9ff";
-    ctx.fillText(text, 128, 32);
+    ctx.fillStyle = "#222a36";
+    ctx.fillText(text, 128, 33);
   });
 }
 
@@ -322,31 +301,28 @@ export function createOdysseyWorld(
   let h = window.innerHeight;
 
   const renderer = new THREE.WebGLRenderer({
-    antialias: false,
+    antialias: true,
     powerPreference: "high-performance",
   });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lowPower ? 1 : 1.5));
   renderer.setSize(w, h);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.0;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   mount.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x04050a);
-  scene.fog = new THREE.FogExp2(0x04050a, 0.016);
+  scene.background = new THREE.Color(0xcfe2f2); // until the HDRI arrives
+  scene.fog = new THREE.Fog(0xdfeaf2, 110, 430);
 
-  const camera = new THREE.PerspectiveCamera(60, w / h, 0.1, 600);
+  const camera = new THREE.PerspectiveCamera(60, w / h, 0.1, 800);
   camera.position.copy(CAM_POINTS[0]);
 
-  /* Post: bloom sells every emissive surface as a light source. */
+  /* Subtle bloom — just sun glints on chrome/water, not a glow machine. */
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(
-    new THREE.Vector2(w, h),
-    lowPower ? 0.7 : 1.0,
-    0.55,
-    0.3
-  );
+  const bloom = new UnrealBloomPass(new THREE.Vector2(w, h), 0.14, 0.4, 1.0);
   composer.addPass(bloom);
 
   const disposables: Array<{ dispose(): void }> = [renderer, composer];
@@ -355,282 +331,369 @@ export function createOdysseyWorld(
     return o;
   };
 
-  /* Shared materials */
-  const matDark = track(
-    new THREE.MeshStandardMaterial({ color: 0x15161c, roughness: 0.55, metalness: 0.4 })
+  /* ── Sky + image-based lighting ── */
+  new RGBELoader().load("/world/sky.hdr", (tex) => {
+    tex.mapping = THREE.EquirectangularReflectionMapping;
+    scene.background = tex;
+    scene.environment = tex;
+    track(tex);
+  });
+
+  /* ── Sun + sky fill ── */
+  const sun = new THREE.DirectionalLight(0xfff3e0, 3.4);
+  sun.castShadow = true;
+  sun.shadow.mapSize.setScalar(lowPower ? 1024 : 2048);
+  sun.shadow.camera.left = -30;
+  sun.shadow.camera.right = 30;
+  sun.shadow.camera.top = 30;
+  sun.shadow.camera.bottom = -30;
+  sun.shadow.camera.near = 10;
+  sun.shadow.camera.far = 160;
+  sun.shadow.bias = -0.0004;
+  sun.shadow.normalBias = 0.02;
+  scene.add(sun, sun.target);
+  const hemi = new THREE.HemisphereLight(0xbcd8f5, 0x7a8b66, 0.55);
+  scene.add(hemi);
+
+  /* ── Textures ── */
+  const tl = new THREE.TextureLoader();
+  const loadTex = (url: string, repeat: number, srgb: boolean) => {
+    const t = tl.load(url);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(repeat, repeat);
+    if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 8;
+    return track(t);
+  };
+  const grassD = loadTex("/world/grass_diff.jpg", 60, true);
+  const grassN = loadTex("/world/grass_nor.jpg", 60, false);
+  const snowD = loadTex("/world/snow_diff.jpg", 7, true);
+  const snowN = loadTex("/world/snow_nor.jpg", 7, false);
+  const concreteD = loadTex("/world/concrete_diff.jpg", 3, true);
+  const woodD = loadTex("/world/wood_diff.jpg", 2.5, true);
+
+  /* ── Shared materials ── */
+  const matWood = track(
+    new THREE.MeshStandardMaterial({ map: woodD, roughness: 0.7 })
   );
   const matConcrete = track(
-    new THREE.MeshStandardMaterial({ color: 0x1c1e24, roughness: 0.9, metalness: 0.05 })
+    new THREE.MeshStandardMaterial({ map: concreteD, roughness: 0.85 })
+  );
+  const matWhite = track(
+    new THREE.MeshStandardMaterial({ color: 0xf2f3f0, roughness: 0.55 })
+  );
+  const matDark = track(
+    new THREE.MeshStandardMaterial({ color: 0x23262d, roughness: 0.5, metalness: 0.4 })
   );
   const matMetal = track(
-    new THREE.MeshStandardMaterial({ color: 0x2a2d36, roughness: 0.3, metalness: 0.85 })
+    new THREE.MeshStandardMaterial({ color: 0x6a7077, roughness: 0.3, metalness: 0.9 })
+  );
+  const matGlass = track(
+    new THREE.MeshPhysicalMaterial({
+      color: 0xcfe6ee,
+      roughness: 0.05,
+      metalness: 0,
+      transparent: true,
+      opacity: 0.16,
+      envMapIntensity: 1.4,
+    })
   );
   const basic = (color: number, opacity = 1) =>
     track(
-      new THREE.MeshBasicMaterial({
-        color,
-        transparent: opacity < 1,
-        opacity,
-      })
+      new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity })
     );
+  /** Decals / glass / particles shouldn't block the sun. */
+  const noShadow = (m: THREE.Object3D) => {
+    m.userData.noShadow = true;
+    return m;
+  };
 
-  const ambient = new THREE.AmbientLight(0x223040, 0.5);
-  scene.add(ambient);
-
-  /* Ground: one long faint tron-grid strip tying the journey together */
-  const gridTex = track(gridTexture());
-  gridTex.wrapS = gridTex.wrapT = THREE.RepeatWrapping;
-  gridTex.repeat.set(24, 64);
-  const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(160, 420),
-    track(
-      new THREE.MeshStandardMaterial({
-        map: gridTex,
-        color: 0x666c80,
-        roughness: 0.85,
-        metalness: 0.2,
-      })
-    )
-  );
-  ground.rotation.x = -Math.PI / 2;
-  ground.position.set(0, 0, -150);
-  scene.add(ground);
-
-  /* Stars */
-  const STAR_N = lowPower ? 500 : 1100;
-  const starGeo = track(new THREE.BufferGeometry());
+  /* ── Terrain ── */
   {
-    const p = new Float32Array(STAR_N * 3);
-    for (let i = 0; i < STAR_N; i++) {
-      p[i * 3] = (Math.random() - 0.5) * 220;
-      p[i * 3 + 1] = 14 + Math.random() * 90;
-      p[i * 3 + 2] = 30 - Math.random() * 400;
+    const SEG = lowPower ? 96 : 150;
+    const geo = track(new THREE.PlaneGeometry(440, 520, SEG, SEG));
+    geo.rotateX(-Math.PI / 2);
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const z = pos.getZ(i) - 140; // recenter strip over the journey
+      pos.setZ(i, z);
+      pos.setY(i, terrainHeight(x, z));
     }
-    starGeo.setAttribute("position", new THREE.BufferAttribute(p, 3));
+    geo.computeVertexNormals();
+    const terrain = new THREE.Mesh(
+      geo,
+      track(
+        new THREE.MeshStandardMaterial({
+          map: grassD,
+          normalMap: grassN,
+          roughness: 0.95,
+        })
+      )
+    );
+    terrain.receiveShadow = true;
+    terrain.userData.noShadow = true; // receives but doesn't cast
+    scene.add(terrain);
   }
-  const stars = new THREE.Points(
-    starGeo,
-    track(
-      new THREE.PointsMaterial({
-        color: 0xbfd4ff,
-        size: 0.35,
-        transparent: true,
-        opacity: 0.85,
-        sizeAttenuation: true,
-      })
-    )
-  );
-  scene.add(stars);
 
-  /* ════ 0 · NEON SIGN ════ */
-  const signGroup = new THREE.Group();
-  signGroup.position.copy(STOP.sign);
+  /* Distant peaks — pushed deep into the fog so they read as hazy ridges */
   {
-    const t1 = track(neonTextTexture("LEVAN", "#46c8ff"));
-    const t2 = track(neonTextTexture("BEROSHVILI", "#ff4fd2"));
-    const m1 = new THREE.Mesh(
-      new THREE.PlaneGeometry(14, 3.5),
-      track(new THREE.MeshBasicMaterial({ map: t1, transparent: true }))
+    const peakMat = track(
+      new THREE.MeshStandardMaterial({ color: 0x93a9bd, roughness: 1, flatShading: true })
     );
-    m1.position.y = 1.4;
-    const m2 = new THREE.Mesh(
-      new THREE.PlaneGeometry(12, 3),
-      track(new THREE.MeshBasicMaterial({ map: t2, transparent: true }))
-    );
-    m2.position.y = -1.5;
-    signGroup.add(m1, m2);
-    // support poles
-    signGroup.add(box(0.1, 12, 0.1, matMetal, -6.5, -3, -0.2));
-    signGroup.add(box(0.1, 12, 0.1, matMetal, 6.5, -3, -0.2));
+    for (const [px, pz, ph, pr] of [
+      [-260, -120, 85, 150], [280, -220, 95, 170], [-290, -300, 80, 160], [260, -20, 70, 140],
+    ]) {
+      const peak = new THREE.Mesh(new THREE.ConeGeometry(pr, ph, 7), peakMat);
+      peak.position.set(px, ph / 2 - 18, pz);
+      noShadow(peak);
+      scene.add(peak);
+    }
   }
-  scene.add(signGroup);
-  const signLightA = new THREE.PointLight(0x46c8ff, 0, 30);
-  signLightA.position.set(-4, 7, 4);
-  const signLightB = new THREE.PointLight(0xff4fd2, 0, 30);
-  signLightB.position.set(4, 4, 4);
-  scene.add(signLightA, signLightB);
 
-  /* ════ 1 · DEV ROOM ════ */
+  /* Scattered pines along the valley (clear of the camera path) */
+  const pineLeaf = track(
+    new THREE.MeshStandardMaterial({ color: 0x2e5d3a, roughness: 0.9, flatShading: true })
+  );
+  const pineTrunk = track(
+    new THREE.MeshStandardMaterial({ color: 0x4a3826, roughness: 0.9 })
+  );
+  const addPine = (x: number, z: number, s: number, snowy = false) => {
+    const y = terrainHeight(x, z);
+    const g = new THREE.Group();
+    g.add(box(0.22 * s, 0.9 * s, 0.22 * s, pineTrunk, 0, 0.45 * s, 0));
+    const c1 = new THREE.Mesh(new THREE.ConeGeometry(1.0 * s, 1.9 * s, 7), pineLeaf);
+    c1.position.y = 1.7 * s;
+    const c2 = new THREE.Mesh(new THREE.ConeGeometry(0.7 * s, 1.5 * s, 7), pineLeaf);
+    c2.position.y = 2.7 * s;
+    g.add(c1, c2);
+    if (snowy) {
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(0.45 * s, 0.7 * s, 7), matWhite);
+      cap.position.y = 3.25 * s;
+      g.add(cap);
+    }
+    g.position.set(x, y, z);
+    scene.add(g);
+  };
+  {
+    let seed = 7;
+    const rand = () => {
+      seed = (seed * 16807) % 2147483647;
+      return seed / 2147483647;
+    };
+    for (let i = 0; i < (lowPower ? 18 : 38); i++) {
+      const side = rand() < 0.5 ? -1 : 1;
+      const x = side * (30 + rand() * 55);
+      const z = 20 - rand() * 330;
+      addPine(x, z, 0.9 + rand() * 1.3, z < -195 && z > -250);
+    }
+  }
+
+  /* ════ 0 · HILLSIDE LETTERS ════ */
+  const lettersGroup = new THREE.Group();
+  lettersGroup.position.copy(STOP.sign);
+  scene.add(lettersGroup);
+  const letterMat = track(
+    new THREE.MeshStandardMaterial({ color: 0xd9d7cd, roughness: 0.65 })
+  );
+  new FontLoader().load("/world/font.json", (font) => {
+    const make = (text: string, size: number, z: number) => {
+      const geo = new TextGeometry(text, {
+        font,
+        size,
+        depth: size * 0.24,
+        curveSegments: 5,
+        bevelEnabled: true,
+        bevelThickness: size * 0.018,
+        bevelSize: size * 0.014,
+        bevelSegments: 2,
+      });
+      geo.computeBoundingBox();
+      const bb = geo.boundingBox!;
+      geo.translate(-(bb.max.x + bb.min.x) / 2, 0, 0);
+      track(geo);
+      const mesh = new THREE.Mesh(geo, letterMat);
+      mesh.position.set(0, 0, z);
+      lettersGroup.add(mesh);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+    };
+    make("LEVAN", 3.1, -3.0);
+    make("BEROSHVILI", 1.3, 4.8);
+  });
+
+  /* ════ 1 · GARDEN DEV STUDIO ════ */
   const dev = new THREE.Group();
   dev.position.copy(STOP.dev);
   const monitorMats: THREE.MeshBasicMaterial[] = [];
   {
-    const deskTop = box(6, 0.18, 2.4, track(
-      new THREE.MeshStandardMaterial({ color: 0x3a2d22, roughness: 0.6 })
-    ), 0, 1.45, 0);
-    dev.add(deskTop);
-    for (const [lx, lz] of [[-2.7, -0.9], [2.7, -0.9], [-2.7, 0.9], [2.7, 0.9]]) {
-      dev.add(box(0.12, 1.45, 0.12, matMetal, lx, 0.72, lz));
+    // wooden deck + pergola whose slats throw striped shadows
+    dev.add(box(9, 0.25, 7, matWood, 0, 0.12, 0));
+    for (const [px, pz] of [[-4.2, -3.2], [4.2, -3.2], [-4.2, 3.2], [4.2, 3.2]]) {
+      dev.add(box(0.22, 3.4, 0.22, matWood, px, 1.95, pz));
     }
-    // three monitors
+    for (let i = 0; i < 9; i++) {
+      dev.add(box(9.4, 0.07, 0.22, matWood, 0, 3.7, -3.2 + i * 0.8));
+    }
+    dev.add(box(0.16, 0.16, 7.0, matWood, -4.2, 3.62, 0));
+    dev.add(box(0.16, 0.16, 7.0, matWood, 4.2, 3.62, 0));
+
+    const deskTop = box(5.6, 0.14, 2.2, matWood, 0, 1.45, -1.2);
+    dev.add(deskTop);
+    for (const [lx, lz] of [[-2.5, -2.0], [2.5, -2.0], [-2.5, -0.4], [2.5, -0.4]]) {
+      dev.add(box(0.1, 1.4, 0.1, matMetal, lx, 0.7, lz));
+    }
     for (let i = -1; i <= 1; i++) {
       const tex = track(codeTexture(i === -1 ? 200 : i === 0 ? 160 : 280));
       const mat = track(new THREE.MeshBasicMaterial({ map: tex }));
       monitorMats.push(mat);
-      const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.05), mat);
-      screen.position.set(i * 1.8, 2.5, -0.55 + Math.abs(i) * 0.18);
-      screen.rotation.y = -i * 0.38;
-      const back = box(1.74, 1.1, 0.06, matDark, 0, 0, -0.04);
-      back.position.copy(screen.position).add(
-        new THREE.Vector3(Math.sin(-i * 0.38) * -0.04, 0, Math.cos(-i * 0.38) * -0.04)
-      );
+      const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.0), mat);
+      screen.position.set(i * 1.7, 2.35, -1.7 + Math.abs(i) * 0.16);
+      screen.rotation.y = -i * 0.36;
+      noShadow(screen);
+      const back = box(1.66, 1.06, 0.06, matDark, 0, 0, 0);
+      back.position.copy(screen.position);
+      back.position.z -= 0.045;
       back.rotation.copy(screen.rotation);
-      const stand = box(0.1, 0.45, 0.1, matMetal, i * 1.8, 1.75, -0.5);
+      const stand = box(0.09, 0.42, 0.09, matMetal, i * 1.7, 1.66, -1.66);
       dev.add(screen, back, stand);
     }
-    dev.add(box(1.6, 0.05, 0.5, matDark, 0, 1.57, 0.55)); // keyboard
+    dev.add(box(1.5, 0.05, 0.5, matDark, 0, 1.55, -0.7)); // keyboard
     const mug = new THREE.Mesh(
       new THREE.CylinderGeometry(0.09, 0.09, 0.2, 12),
-      basic(0xff5a3c)
+      track(new THREE.MeshStandardMaterial({ color: 0xc8472e, roughness: 0.4 }))
     );
-    mug.position.set(1.4, 1.65, 0.6);
+    mug.position.set(1.35, 1.62, -0.6);
     dev.add(mug);
     // chair
-    dev.add(box(0.9, 0.12, 0.9, matDark, 0, 0.85, 1.9));
-    dev.add(box(0.9, 1.1, 0.12, matDark, 0, 1.5, 2.35));
-    dev.add(box(0.1, 0.85, 0.1, matMetal, 0, 0.4, 1.9));
-    // neon strip behind the desk on the floor
-    dev.add(box(6.4, 0.06, 0.06, basic(0x9b5cff), 0, 0.06, -1.5));
-    // desk lamp
-    dev.add(box(0.06, 0.8, 0.06, matMetal, -2.5, 1.95, -0.6));
-    const lampHead = new THREE.Mesh(
-      new THREE.SphereGeometry(0.12, 10, 10),
-      basic(0xffd9a0)
+    dev.add(box(0.85, 0.1, 0.85, matDark, 0, 0.85, 0.6));
+    dev.add(box(0.85, 1.0, 0.1, matDark, 0, 1.45, 1.05));
+    dev.add(box(0.09, 0.8, 0.09, matMetal, 0, 0.4, 0.6));
+    // potted plant
+    const pot = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.3, 0.22, 0.45, 10),
+      track(new THREE.MeshStandardMaterial({ color: 0xb06a3c, roughness: 0.8 }))
     );
-    lampHead.position.set(-2.5, 2.38, -0.5);
-    dev.add(lampHead);
-    // rug
-    const rug = new THREE.Mesh(
-      new THREE.CircleGeometry(2.6, 24),
-      track(new THREE.MeshStandardMaterial({ color: 0x141821, roughness: 1 }))
-    );
-    rug.rotation.x = -Math.PI / 2;
-    rug.position.y = 0.02;
-    dev.add(rug);
+    pot.position.set(-3.4, 0.45, -2.4);
+    const bush = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 1), pineLeaf);
+    bush.position.set(-3.4, 1.05, -2.4);
+    dev.add(pot, bush);
   }
   scene.add(dev);
-  const lampLight = new THREE.PointLight(0xffc878, 0, 14);
-  lampLight.position.copy(STOP.dev).add(v(-2.5, 2.6, -0.3));
-  const monLight = new THREE.PointLight(0x5fa8ff, 0, 12);
-  monLight.position.copy(STOP.dev).add(v(0, 2.4, 0.6));
-  scene.add(lampLight, monLight);
+  const monLight = new THREE.PointLight(0x6fb0ff, 0, 7);
+  monLight.position.copy(STOP.dev).add(v(0, 2.3, -0.4));
+  scene.add(monLight);
 
-  /* ════ 2 · SERVER CORRIDOR ════ */
+  /* ════ 2 · GLASS SERVER HALL ════ */
   const corridor = new THREE.Group();
   corridor.position.copy(STOP.corridor);
   const leds: Array<{ mesh: THREE.Mesh; phase: number; speed: number }> = [];
   {
-    const ledMats = [basic(0x3dff7a), basic(0x46c8ff), basic(0xffb347)];
+    corridor.add(box(12, 0.25, 26, matConcrete, 0, 0.12, 0));
+    // glass walls + roof on a steel frame
+    const wallL = box(0.08, 3.6, 26, matGlass, -6, 2.05, 0);
+    const wallR = box(0.08, 3.6, 26, matGlass, 6, 2.05, 0);
+    const roofG = box(12, 0.08, 26, matGlass, 0, 3.9, 0);
+    noShadow(wallL); noShadow(wallR); noShadow(roofG);
+    corridor.add(wallL, wallR, roofG);
+    for (let i = 0; i < 5; i++) {
+      const z = -12 + i * 6;
+      corridor.add(box(0.18, 3.8, 0.18, matMetal, -6, 2, z));
+      corridor.add(box(0.18, 3.8, 0.18, matMetal, 6, 2, z));
+      corridor.add(box(12.2, 0.18, 0.18, matMetal, 0, 3.95, z));
+    }
+    const ledMats = [basic(0x18e06a), basic(0x2ab4ff), basic(0xffb347)];
     for (const side of [-1, 1]) {
       for (let r = 0; r < 5; r++) {
-        const z = 14 - r * 7;
-        const rack = box(1.6, 4.2, 1.2, matMetal, side * 3.6, 2.1, z);
-        corridor.add(rack);
-        for (let l = 0; l < 9; l++) {
+        const z = 10 - r * 5.5;
+        corridor.add(box(1.5, 2.6, 1.1, matDark, side * 3.6, 1.42, z));
+        for (let l = 0; l < 7; l++) {
           const led = new THREE.Mesh(
-            new THREE.PlaneGeometry(0.4, 0.05),
+            new THREE.PlaneGeometry(0.34, 0.045),
             ledMats[Math.floor(Math.random() * 3)]
           );
-          led.position.set(
-            side * (3.6 - side * 0.81 * side),
-            0.5 + l * 0.42,
-            z - 0.45 + Math.random() * 0.9
-          );
-          led.position.x = side * 2.79; // inner face of the rack
-          led.rotation.y = -side * Math.PI / 2;
+          led.position.set(side * 2.84, 0.5 + l * 0.32, z - 0.38 + Math.random() * 0.76);
+          led.rotation.y = (-side * Math.PI) / 2;
+          noShadow(led);
           corridor.add(led);
-          leds.push({
-            mesh: led,
-            phase: Math.random() * 10,
-            speed: 2 + Math.random() * 7,
-          });
+          leds.push({ mesh: led, phase: Math.random() * 10, speed: 2 + Math.random() * 7 });
         }
       }
-      // floor light strip along the corridor
-      corridor.add(
-        box(0.1, 0.04, 36, basic(0x2766ff), side * 2.6, 0.04, 0)
-      );
     }
   }
   scene.add(corridor);
-  const corrLightA = new THREE.PointLight(0x4677ff, 0, 22);
-  corrLightA.position.copy(STOP.corridor).add(v(0, 3.6, 6));
-  const corrLightB = new THREE.PointLight(0x4677ff, 0, 22);
-  corrLightB.position.copy(STOP.corridor).add(v(0, 3.6, -8));
-  scene.add(corrLightA, corrLightB);
 
-  /* ════ 3 · GUITAR STAGE ════ */
+  /* ════ 3 · GUITAR DECK ════ */
   const stage = new THREE.Group();
   stage.position.copy(STOP.guitar);
   {
     const platform = new THREE.Mesh(
-      new THREE.CylinderGeometry(3, 3.3, 0.25, 36),
-      matDark
+      new THREE.CylinderGeometry(3, 3.2, 0.3, 36),
+      matWood
     );
-    platform.position.y = 0.12;
+    platform.position.y = 0.15;
     stage.add(platform);
 
     const guitar = new THREE.Group();
-    // Strat-ish double-cutaway body: big lower bout, pinched waist,
-    // two slim pointed horns flanking the neck pocket
     const bs = new THREE.Shape();
     bs.moveTo(0, -0.75);
-    bs.bezierCurveTo(0.42, -0.75, 0.62, -0.55, 0.6, -0.28);   // lower-right bout
-    bs.bezierCurveTo(0.58, -0.05, 0.42, 0.02, 0.4, 0.16);     // right waist
-    bs.bezierCurveTo(0.38, 0.32, 0.5, 0.42, 0.44, 0.58);      // upper-right rise
-    bs.bezierCurveTo(0.4, 0.7, 0.26, 0.72, 0.2, 0.58);        // short horn
-    bs.bezierCurveTo(0.16, 0.46, 0.12, 0.4, 0, 0.4);          // neck pocket
+    bs.bezierCurveTo(0.42, -0.75, 0.62, -0.55, 0.6, -0.28);
+    bs.bezierCurveTo(0.58, -0.05, 0.42, 0.02, 0.4, 0.16);
+    bs.bezierCurveTo(0.38, 0.32, 0.5, 0.42, 0.44, 0.58);
+    bs.bezierCurveTo(0.4, 0.7, 0.26, 0.72, 0.2, 0.58);
+    bs.bezierCurveTo(0.16, 0.46, 0.12, 0.4, 0, 0.4);
     bs.bezierCurveTo(-0.12, 0.4, -0.16, 0.5, -0.2, 0.66);
-    bs.bezierCurveTo(-0.24, 0.84, -0.44, 0.82, -0.46, 0.62);  // tall horn
-    bs.bezierCurveTo(-0.48, 0.46, -0.42, 0.32, -0.44, 0.18);  // left waist
-    bs.bezierCurveTo(-0.46, 0.0, -0.62, -0.1, -0.64, -0.35);  // lower-left bout
+    bs.bezierCurveTo(-0.24, 0.84, -0.44, 0.82, -0.46, 0.62);
+    bs.bezierCurveTo(-0.48, 0.46, -0.42, 0.32, -0.44, 0.18);
+    bs.bezierCurveTo(-0.46, 0.0, -0.62, -0.1, -0.64, -0.35);
     bs.bezierCurveTo(-0.6, -0.62, -0.36, -0.75, 0, -0.75);
-    const bodyGeo = track(
-      new THREE.ExtrudeGeometry(bs, {
-        depth: 0.09,
-        bevelEnabled: true,
-        bevelSize: 0.03,
-        bevelThickness: 0.03,
-        bevelSegments: 3,
-      })
-    );
     const body = new THREE.Mesh(
-      bodyGeo,
-      track(new THREE.MeshStandardMaterial({ color: 0x0a0a0c, roughness: 0.15, metalness: 0.25 }))
+      track(
+        new THREE.ExtrudeGeometry(bs, {
+          depth: 0.09,
+          bevelEnabled: true,
+          bevelSize: 0.03,
+          bevelThickness: 0.03,
+          bevelSegments: 3,
+        })
+      ),
+      track(
+        new THREE.MeshPhysicalMaterial({
+          color: 0x0b0b0e,
+          roughness: 0.18,
+          metalness: 0.1,
+          clearcoat: 1,
+          clearcoatRoughness: 0.08,
+        })
+      )
     );
     guitar.add(body);
-    // wood-tone center stripe (the player's actual guitar detail)
     const stripe = new THREE.Mesh(
       track(new THREE.ExtrudeGeometry(roundedRectShape(0.34, 1.0, 0.12), { depth: 0.012, bevelEnabled: false })),
-      track(new THREE.MeshStandardMaterial({ color: 0x553a1c, roughness: 0.7 }))
+      track(new THREE.MeshStandardMaterial({ color: 0x6e4a22, roughness: 0.55 }))
     );
     stripe.position.set(-0.02, -0.1, 0.123);
     guitar.add(stripe);
-    // pickups + bridge
     const pickupMat = track(
       new THREE.MeshStandardMaterial({ color: 0x1c1c20, roughness: 0.4, metalness: 0.6 })
     );
     for (let p = 0; p < 3; p++) {
       guitar.add(box(0.2, 0.05, 0.02, pickupMat, -0.02, 0.12 - p * 0.18, 0.135));
     }
-    // neck + fretboard
-    const neck = box(0.13, 1.5, 0.05, track(
-      new THREE.MeshStandardMaterial({ color: 0x77573a, roughness: 0.7 })
-    ), -0.02, 1.27, 0.06);
-    guitar.add(neck);
+    const neckMat = track(
+      new THREE.MeshStandardMaterial({ color: 0x8a6a45, roughness: 0.6 })
+    );
+    guitar.add(box(0.13, 1.5, 0.05, neckMat, -0.02, 1.27, 0.06));
     guitar.add(box(0.13, 1.5, 0.012, track(
       new THREE.MeshStandardMaterial({ color: 0x2c1d12, roughness: 0.6 })
     ), -0.02, 1.27, 0.09));
-    // headstock + Fender-style label
-    const head = box(0.22, 0.4, 0.04, track(
-      new THREE.MeshStandardMaterial({ color: 0x77573a, roughness: 0.7 })
-    ), 0.02, 2.2, 0.05);
-    guitar.add(head);
+    guitar.add(box(0.22, 0.4, 0.04, neckMat, 0.02, 2.2, 0.05));
     const label = new THREE.Mesh(
       new THREE.PlaneGeometry(0.2, 0.05),
       track(new THREE.MeshBasicMaterial({ map: track(labelTexture("Fender")), transparent: true }))
     );
     label.position.set(0.02, 2.3, 0.075);
+    noShadow(label);
     guitar.add(label);
     for (let tn = 0; tn < 6; tn++) {
       const tuner = new THREE.Mesh(
@@ -641,58 +704,46 @@ export function createOdysseyWorld(
       tuner.position.set(-0.08, 2.04 + tn * 0.062, 0.05);
       guitar.add(tuner);
     }
-    // strings — muted so they don't bloom into a light-saber
-    const strMat = basic(0x8a8270);
+    const strMat = track(
+      new THREE.MeshStandardMaterial({ color: 0xc8c2b2, roughness: 0.3, metalness: 0.9 })
+    );
     for (let s2 = 0; s2 < 6; s2++) {
       const str = new THREE.Mesh(
         new THREE.CylinderGeometry(0.003, 0.003, 2.6, 4),
         strMat
       );
       str.position.set(-0.065 + s2 * 0.022, 0.95, 0.1);
+      noShadow(str);
       guitar.add(str);
     }
-    guitar.position.set(0, 0.95, 0.3);
+    guitar.position.set(0.3, 1.1, 0.4);
     guitar.rotation.set(-0.16, 0.5, 0);
-    guitar.scale.set(1.15, 1.35, 1.35); // slimmer waist, full height
+    guitar.scale.set(1.15, 1.35, 1.35);
     stage.add(guitar);
-    // stand
-    stage.add(box(0.06, 1.0, 0.06, matMetal, 0, 0.6, 0.06));
-    stage.add(box(0.7, 0.06, 0.06, matMetal, 0, 0.18, 0.2));
+    stage.add(box(0.06, 1.0, 0.06, matMetal, 0.3, 0.75, 0.16));
+    stage.add(box(0.7, 0.06, 0.06, matMetal, 0.3, 0.33, 0.3));
+    // amp
+    const amp = new THREE.Group();
+    amp.add(box(1.1, 0.9, 0.6, matDark, 0, 0.45, 0));
+    amp.add(box(0.95, 0.5, 0.02, track(
+      new THREE.MeshStandardMaterial({ color: 0x4a4138, roughness: 0.95 })
+    ), 0, 0.38, 0.31));
+    for (let k = 0; k < 4; k++) {
+      const knob = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.035, 0.035, 0.03, 8),
+        matMetal
+      );
+      knob.rotation.x = Math.PI / 2;
+      knob.position.set(-0.3 + k * 0.2, 0.78, 0.32);
+      amp.add(knob);
+    }
+    amp.position.set(-1.6, 0.3, -0.6);
+    amp.rotation.y = 0.4;
+    stage.add(amp);
   }
   scene.add(stage);
-  // cool rim light from behind separates the black body from the night
-  const rimLight = new THREE.PointLight(0x5f8aff, 0, 16);
-  rimLight.position.copy(STOP.guitar).add(v(-2.5, 2.2, -3));
-  scene.add(rimLight);
-  const spot = new THREE.SpotLight(0xfff2dd, 0, 26, 0.42, 0.55, 1.2);
-  spot.position.copy(STOP.guitar).add(v(0.5, 9.5, 2.4));
-  const spotTarget = new THREE.Object3D();
-  spotTarget.position.copy(STOP.guitar).add(v(0, 1, 0.2));
-  scene.add(spotTarget);
-  spot.target = spotTarget;
-  scene.add(spot);
-  // visible beam cone
-  const beamMat = track(
-    new THREE.MeshBasicMaterial({
-      color: 0xfff4da,
-      transparent: true,
-      opacity: 0,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    })
-  );
-  const beam = new THREE.Mesh(
-    track(new THREE.ConeGeometry(2.6, 9.0, 28, 1, true)),
-    beamMat
-  );
-  beam.position.copy(STOP.guitar).add(v(0.25, 5.0, 1.3));
-  beam.rotation.x = 0.12;
-  scene.add(beam);
 
-  /* ════ 4 · GARAGE — the actual car timeline ════
-   * W203 '04 (dark red) → W204 '12 (black) → Forester Wilderness '22
-   * (autumn green) → and a glowing "next" supercar. Georgian plates. */
+  /* ════ 4 · GARAGE — the actual car timeline ════ */
   const garage = new THREE.Group();
   garage.position.copy(STOP.garage);
   const doorPivot = new THREE.Group();
@@ -702,38 +753,39 @@ export function createOdysseyWorld(
   const headlights: THREE.SpotLight[] = [];
   {
     const W = 15, H = 4, D = 9.5;
-    garage.add(box(W, 0.2, D, matConcrete, 0, 0.1, 0));                 // slab
-    garage.add(box(W, H, 0.3, matConcrete, 0, H / 2, -D / 2));          // back
-    garage.add(box(0.3, H, D, matConcrete, -W / 2, H / 2, 0));          // left
-    garage.add(box(0.3, H, D, matConcrete, W / 2, H / 2, 0));           // right
-    garage.add(box(W, 0.3, D, matConcrete, 0, H, 0));                   // roof
-    // ceiling light tubes
-    garage.add(box(4, 0.06, 0.2, basic(0xfff6e0), -3.5, H - 0.2, 0.6));
-    garage.add(box(4, 0.06, 0.2, basic(0xfff6e0), 3.5, H - 0.2, 0.6));
-    // shelf with boxes
-    garage.add(box(3, 0.08, 0.8, matMetal, -5, 2.6, -4.2));
-    garage.add(box(0.6, 0.5, 0.6, matDark, -5.6, 2.95, -4.2));
-    garage.add(box(0.5, 0.4, 0.5, matDark, -4.5, 2.9, -4.2));
-    // tilt-up door hinged at the top of the opening
+    garage.add(box(W + 4, 0.22, D + 7, matConcrete, 0, 0.1, 2)); // apron slab
+    const wallMat = track(
+      new THREE.MeshStandardMaterial({ color: 0xe8e4dc, roughness: 0.85 })
+    );
+    garage.add(box(W, H, 0.3, wallMat, 0, H / 2, -D / 2));
+    garage.add(box(0.3, H, D, wallMat, -W / 2, H / 2, 0));
+    garage.add(box(0.3, H, D, wallMat, W / 2, H / 2, 0));
+    garage.add(box(W + 0.8, 0.3, D + 0.8, matConcrete, 0, H + 0.1, 0));
+    garage.add(box(4, 0.06, 0.18, basic(0xfff2d8), -3.5, H - 0.25, 0.6));
+    garage.add(box(4, 0.06, 0.18, basic(0xfff2d8), 3.5, H - 0.25, 0.6));
     doorPivot.position.set(0, H - 0.15, D / 2);
     const door = box(W - 0.7, H - 0.35, 0.12, track(
-      new THREE.MeshStandardMaterial({ color: 0x3b404c, roughness: 0.45, metalness: 0.7 })
+      new THREE.MeshStandardMaterial({ color: 0x9aa1ab, roughness: 0.4, metalness: 0.7 })
     ), 0, -(H - 0.35) / 2, 0);
     doorPivot.add(door);
     garage.add(doorPivot);
 
-    /* Car builder — extruded side profile (+x = nose), per-era silhouettes */
     const glassMat = track(
-      new THREE.MeshStandardMaterial({ color: 0x0c1018, roughness: 0.06, metalness: 0.9 })
+      new THREE.MeshPhysicalMaterial({
+        color: 0x1c2630,
+        roughness: 0.05,
+        metalness: 0.4,
+        envMapIntensity: 1.5,
+      })
     );
     const tireMat = track(
-      new THREE.MeshStandardMaterial({ color: 0x0a0a0c, roughness: 0.9 })
+      new THREE.MeshStandardMaterial({ color: 0x111114, roughness: 0.92 })
     );
     const rimSilver = track(
-      new THREE.MeshStandardMaterial({ color: 0xb9c2cc, roughness: 0.25, metalness: 1 })
+      new THREE.MeshStandardMaterial({ color: 0xc6cdd6, roughness: 0.18, metalness: 1 })
     );
     const headlightOff = track(
-      new THREE.MeshBasicMaterial({ color: 0x756f5e })
+      new THREE.MeshStandardMaterial({ color: 0xd9dde2, roughness: 0.2, metalness: 0.6 })
     );
     headlightMatOn = track(
       new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 })
@@ -741,7 +793,6 @@ export function createOdysseyWorld(
 
     type CarKind = "sedan04" | "sedan12" | "suv" | "super";
     const profiles: Record<CarKind, () => THREE.Shape> = {
-      // W203 — rounded classic three-box sedan
       sedan04: () => {
         const s = new THREE.Shape();
         s.moveTo(-2.0, 0.28);
@@ -756,7 +807,6 @@ export function createOdysseyWorld(
         s.lineTo(-2.0, 0.28);
         return s;
       },
-      // W204 — sharper, longer hood, lower roofline
       sedan12: () => {
         const s = new THREE.Shape();
         s.moveTo(-2.15, 0.28);
@@ -771,23 +821,21 @@ export function createOdysseyWorld(
         s.lineTo(-2.15, 0.28);
         return s;
       },
-      // Forester Wilderness — tall boxy wagon, upright glass, long roof
       suv: () => {
         const s = new THREE.Shape();
         s.moveTo(-2.15, 0.42);
         s.lineTo(-2.28, 0.85);
         s.quadraticCurveTo(-2.26, 1.1, -2.1, 1.25);
-        s.lineTo(-1.85, 1.72);        // upright tailgate
+        s.lineTo(-1.85, 1.72);
         s.quadraticCurveTo(-1.5, 1.8, -0.6, 1.8);
-        s.lineTo(0.9, 1.78);          // long flat roof
-        s.quadraticCurveTo(1.35, 1.7, 1.65, 1.3);  // windshield
-        s.quadraticCurveTo(2.05, 1.18, 2.35, 1.12); // hood
+        s.lineTo(0.9, 1.78);
+        s.quadraticCurveTo(1.35, 1.7, 1.65, 1.3);
+        s.quadraticCurveTo(2.05, 1.18, 2.35, 1.12);
         s.quadraticCurveTo(2.55, 1.0, 2.55, 0.7);
         s.lineTo(2.45, 0.42);
         s.lineTo(-2.15, 0.42);
         return s;
       },
-      // The "next one" — low wedge supercar
       super: () => {
         const s = new THREE.Shape();
         s.moveTo(-2.25, 0.22);
@@ -803,88 +851,90 @@ export function createOdysseyWorld(
       },
     };
 
-    const buildCar = (opts: {
+    const buildCar = (carOpts: {
       kind: CarKind;
       color: number;
       plate: string;
-      lit?: boolean;   // working headlights (the current car)
-      glow?: boolean;  // underglow + hover (the future car)
+      lit?: boolean;
+      glow?: boolean;
     }) => {
       const car = new THREE.Group();
-      const isSuv = opts.kind === "suv";
+      const isSuv = carOpts.kind === "suv";
       const wheelR = isSuv ? 0.46 : 0.4;
       const lift = isSuv ? 0.16 : 0;
 
-      const bodyGeo = track(
-        new THREE.ExtrudeGeometry(profiles[opts.kind](), {
-          depth: 1.8,
-          bevelEnabled: true,
-          bevelSize: 0.06,
-          bevelThickness: 0.06,
-          bevelSegments: 3,
-        })
-      );
       const body = new THREE.Mesh(
-        bodyGeo,
         track(
-          new THREE.MeshStandardMaterial({
-            color: opts.color,
-            roughness: opts.kind === "super" ? 0.2 : 0.32,
+          new THREE.ExtrudeGeometry(profiles[carOpts.kind](), {
+            depth: 1.8,
+            bevelEnabled: true,
+            bevelSize: 0.06,
+            bevelThickness: 0.06,
+            bevelSegments: 3,
+          })
+        ),
+        track(
+          // clearcoat + HDRI reflections = actual car paint
+          new THREE.MeshPhysicalMaterial({
+            color: carOpts.color,
+            roughness: 0.32,
             metalness: 0.85,
+            clearcoat: 1,
+            clearcoatRoughness: 0.06,
+            envMapIntensity: 1.25,
           })
         )
       );
       body.position.set(0, lift, -0.9);
       car.add(body);
 
-      // cabin glass band
       const glassH = isSuv ? 0.45 : 0.32;
-      const glassY = isSuv ? 1.45 : opts.kind === "super" ? 1.06 : 1.12;
+      const glassY = isSuv ? 1.45 : carOpts.kind === "super" ? 1.06 : 1.12;
       car.add(box(isSuv ? 2.4 : 1.2, glassH, 1.62, glassMat, -0.2, glassY + lift, 0));
       if (isSuv) {
-        // roof rails + black lower cladding (Wilderness trim)
         car.add(box(2.6, 0.06, 0.08, matDark, -0.4, 1.86 + lift, 0.7));
         car.add(box(2.6, 0.06, 0.08, matDark, -0.4, 1.86 + lift, -0.7));
         car.add(box(4.6, 0.18, 1.92, matDark, 0.1, 0.4 + lift, 0));
       }
 
-      // wheels
       const wx = isSuv ? [-1.5, 1.6] : [-1.45, 1.55];
       for (const x of wx) {
         for (const z of [0.95, -0.95]) {
           const tire = new THREE.Mesh(
-            new THREE.CylinderGeometry(wheelR, wheelR, 0.3, 18),
+            new THREE.CylinderGeometry(wheelR, wheelR, 0.3, 20),
             tireMat
           );
           tire.rotation.x = Math.PI / 2;
           tire.position.set(x, wheelR, z);
           const rim = new THREE.Mesh(
             new THREE.TorusGeometry(wheelR * 0.52, 0.035, 8, 18),
-            opts.glow ? basic(0x35e0ff) : rimSilver
+            carOpts.glow ? basic(0x35e0ff) : rimSilver
           );
           rim.position.set(x, wheelR, z + Math.sign(z) * 0.16);
           car.add(tire, rim);
         }
       }
 
-      // headlights + tail lights
-      const noseX = opts.kind === "suv" ? 2.6 : opts.kind === "sedan04" ? 2.27 : 2.47;
+      const noseX = carOpts.kind === "suv" ? 2.6 : carOpts.kind === "sedan04" ? 2.27 : 2.47;
       const lightY = (isSuv ? 0.95 : 0.55) + lift;
       for (const z of [-0.6, 0.6]) {
         const hl = new THREE.Mesh(
           new THREE.PlaneGeometry(0.26, 0.1),
-          opts.lit || opts.glow ? headlightMatOn : headlightOff
+          carOpts.lit || carOpts.glow ? headlightMatOn : headlightOff
         );
         hl.position.set(noseX + 0.01, lightY, z);
         hl.rotation.y = Math.PI / 2;
+        noShadow(hl);
         car.add(hl);
-        const tl = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.09), basic(0x7a1818));
-        tl.position.set(-noseX + (isSuv ? 0.25 : 0.12), lightY + 0.06, z);
-        tl.rotation.y = -Math.PI / 2;
-        car.add(tl);
-        if (opts.lit) {
-          // Aimed down at the slab so the beam pools on the floor instead
-          // of glaring straight into the approaching camera.
+        const tail = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.22, 0.09),
+          track(new THREE.MeshStandardMaterial({ color: 0x801c1c, roughness: 0.3 }))
+        );
+        tail.position.set(-noseX + (isSuv ? 0.25 : 0.12), lightY + 0.06, z);
+        tail.rotation.y = -Math.PI / 2;
+        noShadow(tail);
+        car.add(tail);
+        if (carOpts.lit) {
           const sl = new THREE.SpotLight(0xeef4ff, 0, 24, 0.34, 0.7, 1.6);
           sl.position.set(noseX, lightY, z);
           const slt = new THREE.Object3D();
@@ -895,18 +945,20 @@ export function createOdysseyWorld(
         }
       }
 
-      // Georgian plates, front + rear
-      const pTex = track(plateTexture(opts.plate));
-      const pMat = track(new THREE.MeshBasicMaterial({ map: pTex }));
+      const pMat = track(
+        new THREE.MeshBasicMaterial({ map: track(plateTexture(carOpts.plate)) })
+      );
       const front = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.1), pMat);
       front.position.set(noseX + 0.02, (isSuv ? 0.66 : 0.38) + lift, 0);
       front.rotation.y = Math.PI / 2;
+      noShadow(front);
       const rear = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.1), pMat);
       rear.position.set(-noseX + (isSuv ? 0.18 : 0.06), (isSuv ? 0.8 : 0.45) + lift, 0);
       rear.rotation.y = -Math.PI / 2;
+      noShadow(rear);
       car.add(front, rear);
 
-      if (opts.glow) {
+      if (carOpts.glow) {
         underglowMat = track(
           new THREE.MeshBasicMaterial({
             color: 0x27d8ff,
@@ -919,31 +971,29 @@ export function createOdysseyWorld(
         const glow = new THREE.Mesh(new THREE.PlaneGeometry(4.9, 2.3), underglowMat);
         glow.rotation.x = -Math.PI / 2;
         glow.position.y = 0.06;
+        noShadow(glow);
         car.add(glow);
       }
       return car;
     };
 
-    const lineup: Array<{
-      x: number;
-      plaque: string;
-      car: THREE.Group;
-    }> = [
-      { x: -5.5, plaque: "W203 · 2004", car: buildCar({ kind: "sedan04", color: 0x4a1014, plate: "MA-010-RK" }) },
-      { x: -1.85, plaque: "W204 · 2012", car: buildCar({ kind: "sedan12", color: 0x0d0d11, plate: "MA-020-RK" }) },
-      { x: 1.85, plaque: "FORESTER · 2022", car: buildCar({ kind: "suv", color: 0x3c4631, plate: "MA-030-RK", lit: true }) },
-      { x: 5.5, plaque: "NEXT · 20??", car: buildCar({ kind: "super", color: 0x2e3340, plate: "MA-040-RK", glow: true }) },
+    const lineup = [
+      { x: -5.5, plaque: "W203 · 2004", car: buildCar({ kind: "sedan04", color: 0x5a1418, plate: "MA-010-RK" }) },
+      { x: -1.85, plaque: "W204 · 2012", car: buildCar({ kind: "sedan12", color: 0x0e0e12, plate: "MA-020-RK" }) },
+      { x: 1.85, plaque: "FORESTER · 2022", car: buildCar({ kind: "suv", color: 0x46523a, plate: "MA-030-RK", lit: true }) },
+      { x: 5.5, plaque: "NEXT · 20??", car: buildCar({ kind: "super", color: 0x39404e, plate: "MA-040-RK", glow: true }) },
     ];
     for (const { x, plaque, car } of lineup) {
-      car.position.set(x, 0.12, -0.6);
-      car.rotation.y = -Math.PI / 2 + (Math.random() - 0.5) * 0.06; // nose out the door
+      car.position.set(x, 0.2, -0.6);
+      car.rotation.y = -Math.PI / 2 + (Math.random() - 0.5) * 0.06;
       garage.add(car);
       const pl = new THREE.Mesh(
         new THREE.PlaneGeometry(2.0, 0.5),
         track(new THREE.MeshBasicMaterial({ map: track(plaqueTexture(plaque)), transparent: true }))
       );
       pl.rotation.x = -Math.PI / 2;
-      pl.position.set(x, 0.22, 3.6);
+      pl.position.set(x, 0.23, 3.9);
+      noShadow(pl);
       garage.add(pl);
     }
     superCar = lineup[3].car;
@@ -953,114 +1003,59 @@ export function createOdysseyWorld(
   garageLight.position.copy(STOP.garage).add(v(-3.5, 3.4, 2.2));
   const garageLight2 = new THREE.PointLight(0xfff0d8, 0, 26);
   garageLight2.position.copy(STOP.garage).add(v(3.5, 3.4, 2.2));
-  // driveway fill — lights the car noses through the open door
-  const drivewayLight = new THREE.PointLight(0xd8e4ff, 0, 30);
-  drivewayLight.position.copy(STOP.garage).add(v(0, 3.5, 9));
-  scene.add(garageLight, garageLight2, drivewayLight);
+  scene.add(garageLight, garageLight2);
 
-  /* ════ 5 · SNOW SLOPE ════ */
+  /* ════ 5 · SNOW FIELD ════ */
   const snowG = new THREE.Group();
   snowG.position.copy(STOP.snow);
   {
     const snowMat = track(
-      new THREE.MeshStandardMaterial({ color: 0xdfe9f5, roughness: 0.95 })
+      new THREE.MeshStandardMaterial({
+        map: snowD,
+        normalMap: snowN,
+        roughness: 0.85,
+      })
     );
-    const patch = new THREE.Mesh(new THREE.CircleGeometry(15, 28), snowMat);
+    const patch = new THREE.Mesh(new THREE.CircleGeometry(16, 36), snowMat);
     patch.rotation.x = -Math.PI / 2;
-    patch.position.y = 0.04;
+    patch.position.y = 0.06;
+    patch.userData.noShadow = true;
+    patch.receiveShadow = true;
     snowG.add(patch);
-    for (const [mx, mz, mr] of [[-3, -2, 2.2], [3.4, -4, 3.0], [1.5, 2.5, 1.6]]) {
-      const mound = new THREE.Mesh(new THREE.SphereGeometry(mr, 18, 12), snowMat);
-      mound.scale.y = 0.32;
+    for (const [mx, mz, mr] of [[-3, -2, 2.4], [3.4, -4, 3.2], [1.5, 2.5, 1.7], [-6, 3, 2.0]]) {
+      const mound = new THREE.Mesh(new THREE.SphereGeometry(mr, 20, 14), snowMat);
+      mound.scale.y = 0.3;
       mound.position.set(mx, 0.1, mz);
       snowG.add(mound);
     }
-    // snowboard standing in the snow
     const board = new THREE.Mesh(
       track(new THREE.ExtrudeGeometry(roundedRectShape(0.62, 2.9, 0.3), { depth: 0.05, bevelEnabled: false })),
       [
-        track(new THREE.MeshStandardMaterial({ map: track(boardTexture()), roughness: 0.35 })),
+        track(new THREE.MeshPhysicalMaterial({
+          map: track(boardTexture()),
+          roughness: 0.25,
+          clearcoat: 0.8,
+          clearcoatRoughness: 0.15,
+        })),
         track(new THREE.MeshStandardMaterial({ color: 0x101015, roughness: 0.4 })),
       ]
     );
-    board.position.set(0, 1.2, 0);
+    board.position.set(0, 1.35, 0);
     board.rotation.set(-0.18, 0.35, 0.06);
     snowG.add(board);
-    // bindings hint
-    snowG.add(box(0.4, 0.3, 0.1, matDark, -0.06, 1.7, 0.12));
-    snowG.add(box(0.4, 0.3, 0.1, matDark, 0.1, 0.8, 0.12));
-    // low-poly pines
-    const pineMat = track(
-      new THREE.MeshStandardMaterial({ color: 0x0e3b28, roughness: 0.8, flatShading: true })
-    );
-    for (const [px, pz, ps] of [[-6, -5, 1.4], [-8, -1, 1.0], [6, -6, 1.7], [8, -2, 1.1]]) {
-      const pine = new THREE.Group();
-      pine.add(box(0.18 * ps, 0.7 * ps, 0.18 * ps, matDark, 0, 0.35 * ps, 0));
-      const c1 = new THREE.Mesh(new THREE.ConeGeometry(0.9 * ps, 1.6 * ps, 7), pineMat);
-      c1.position.y = 1.4 * ps;
-      const c2 = new THREE.Mesh(new THREE.ConeGeometry(0.65 * ps, 1.3 * ps, 7), pineMat);
-      c2.position.y = 2.2 * ps;
-      pine.add(c1, c2);
-      pine.position.set(px, 0, pz);
-      snowG.add(pine);
-    }
-    // moon
-    const moon = new THREE.Mesh(new THREE.CircleGeometry(2.4, 24), basic(0xfdfaef));
-    moon.position.set(-12, 22, -42);
-    snowG.add(moon);
+    snowG.add(box(0.4, 0.3, 0.1, matDark, -0.06, 1.85, 0.14));
+    snowG.add(box(0.4, 0.3, 0.1, matDark, 0.1, 0.95, 0.14));
   }
   scene.add(snowG);
-  // aurora — animated shader ribbon in the sky
-  const auroraMat = track(
-    new THREE.ShaderMaterial({
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-      uniforms: { uTime: { value: 0 }, uIntensity: { value: 0 } },
-      vertexShader: `
-        varying vec2 vUv;
-        void main() {
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform float uTime;
-        uniform float uIntensity;
-        varying vec2 vUv;
-        void main() {
-          float band = sin(vUv.x * 7.0 + uTime * 0.45 + sin(vUv.x * 3.1 - uTime * 0.2) * 1.6);
-          float curtain = smoothstep(-0.9, 0.9, band);
-          float vert = smoothstep(0.0, 0.25, vUv.y) * smoothstep(1.0, 0.45, vUv.y);
-          vec3 green = vec3(0.15, 0.95, 0.55);
-          vec3 violet = vec3(0.55, 0.25, 0.95);
-          vec3 col = mix(green, violet, vUv.y + 0.25 * sin(vUv.x * 5.0 + uTime * 0.3));
-          float a = curtain * vert * uIntensity * 0.22;
-          gl_FragColor = vec4(col * 0.8, a);
-        }
-      `,
-    })
-  );
-  const aurora = new THREE.Mesh(new THREE.PlaneGeometry(80, 20), auroraMat);
-  aurora.position.copy(STOP.snow).add(v(0, 27, -48));
-  scene.add(aurora);
-  const moonLight = new THREE.PointLight(0xa8c8ff, 0, 60);
-  moonLight.position.copy(STOP.snow).add(v(-6, 14, 2));
-  // close fill on the board itself so the graphic reads
-  const boardLight = new THREE.PointLight(0xcfe0ff, 0, 14);
-  boardLight.position.copy(STOP.snow).add(v(1.5, 2.6, 3.5));
-  scene.add(moonLight, boardLight);
-  // falling snow
-  const SNOW_N = lowPower ? 250 : 650;
+  const SNOW_N = lowPower ? 220 : 520;
   const snowGeo = track(new THREE.BufferGeometry());
   const snowPos = new Float32Array(SNOW_N * 3);
   const snowSpeed = new Float32Array(SNOW_N);
   for (let i = 0; i < SNOW_N; i++) {
     snowPos[i * 3] = STOP.snow.x + (Math.random() - 0.5) * 34;
-    snowPos[i * 3 + 1] = Math.random() * 16;
+    snowPos[i * 3 + 1] = STOP.snow.y + Math.random() * 14;
     snowPos[i * 3 + 2] = STOP.snow.z + (Math.random() - 0.5) * 34;
-    snowSpeed[i] = 0.8 + Math.random() * 1.6;
+    snowSpeed[i] = 0.7 + Math.random() * 1.3;
   }
   snowGeo.setAttribute("position", new THREE.BufferAttribute(snowPos, 3));
   const snowPts = new THREE.Points(
@@ -1068,128 +1063,132 @@ export function createOdysseyWorld(
     track(
       new THREE.PointsMaterial({
         color: 0xffffff,
-        size: 0.09,
+        size: 0.08,
         transparent: true,
-        opacity: 0.9,
+        opacity: 0.85,
         sizeAttenuation: true,
       })
     )
   );
+  noShadow(snowPts);
   scene.add(snowPts);
 
-  /* ════ 6 · ROOFTOP ════ */
+  /* ════ 6 · CLIFF VILLA DECK ════ */
   const roof = new THREE.Group();
   roof.position.copy(STOP.roof);
-  let poolMat: THREE.MeshBasicMaterial;
+  let poolMat!: THREE.MeshPhysicalMaterial;
   {
-    roof.add(box(28, 0.7, 17, matConcrete, 0, -0.35, 0));
+    const deckMat = track(
+      new THREE.MeshStandardMaterial({ map: concreteD, color: 0xe9e9e4, roughness: 0.7 })
+    );
+    roof.add(box(30, 0.8, 18, deckMat, 0, -0.4, 0));
     // glass railing
-    const railMat = track(
-      new THREE.MeshStandardMaterial({
-        color: 0x9fd4e8,
-        roughness: 0.05,
-        metalness: 0.2,
+    for (const [bx, bz, bw, bd] of [
+      [0, -8.8, 30, 0.06], [-14.8, 0, 0.06, 18], [14.8, 0, 0.06, 18],
+    ]) {
+      const rail = box(bw as number, 1.05, bd as number, matGlass, bx as number, 0.55, bz as number);
+      noShadow(rail);
+      roof.add(rail);
+    }
+    // infinity pool — reflective water
+    poolMat = track(
+      new THREE.MeshPhysicalMaterial({
+        color: 0x1583a2,
+        roughness: 0.08,
+        metalness: 0,
         transparent: true,
-        opacity: 0.18,
+        opacity: 0.85,
+        envMapIntensity: 0.8,
       })
     );
-    roof.add(box(28, 1.0, 0.06, railMat, 0, 0.5, -8.5));
-    roof.add(box(0.06, 1.0, 17, railMat, -14, 0.5, 0));
-    roof.add(box(0.06, 1.0, 17, railMat, 14, 0.5, 0));
-    // pool — glowing cyan water
-    poolMat = track(
-      new THREE.MeshBasicMaterial({ color: 0x0c7e92, transparent: true, opacity: 0.7 })
-    );
-    const pool = new THREE.Mesh(new THREE.PlaneGeometry(7, 3.6), poolMat);
+    const pool = new THREE.Mesh(new THREE.PlaneGeometry(8, 4), poolMat);
     pool.rotation.x = -Math.PI / 2;
-    pool.position.set(-6.5, 0.03, -2.5);
+    pool.position.set(-7, 0.08, -4);
+    noShadow(pool);
     roof.add(pool);
-    roof.add(box(7.5, 0.12, 0.25, basic(0xe8e4da), -6.5, 0.06, -0.55));
-    roof.add(box(7.5, 0.12, 0.25, basic(0xe8e4da), -6.5, 0.06, -4.45));
-    roof.add(box(0.25, 0.12, 4.1, basic(0xe8e4da), -10.1, 0.06, -2.5));
-    roof.add(box(0.25, 0.12, 4.1, basic(0xe8e4da), -2.9, 0.06, -2.5));
-    // fireplace
-    const fp = new THREE.Group();
-    fp.add(box(1.8, 0.9, 0.9, track(
-      new THREE.MeshStandardMaterial({ color: 0x2e2a26, roughness: 0.95 })
-    ), 0, 0.45, 0));
-    fp.add(box(1.3, 0.45, 0.92, basic(0x140a05), 0, 0.42, 0.01));
-    fp.position.set(4.5, 0, -4.5);
-    roof.add(fp);
-    // lounge sofas + table
-    const sofaMat = track(
-      new THREE.MeshStandardMaterial({ color: 0x33302c, roughness: 0.9 })
+    roof.add(box(8.5, 0.16, 0.3, matWhite, -7, 0.08, -1.85));
+    roof.add(box(8.5, 0.16, 0.3, matWhite, -7, 0.08, -6.15));
+    roof.add(box(0.3, 0.16, 4.6, matWhite, -11.4, 0.08, -4));
+    roof.add(box(0.3, 0.16, 4.6, matWhite, -2.6, 0.08, -4));
+    // villa behind the deck
+    const villa = new THREE.Group();
+    villa.add(box(13, 4.2, 6, matWhite, 0, 2.1, 0));
+    villa.add(box(14.4, 0.3, 7.4, matConcrete, 0, 4.35, 0.3));
+    const win = box(11.5, 2.2, 0.1, track(
+      new THREE.MeshPhysicalMaterial({
+        color: 0x2a3947,
+        roughness: 0.04,
+        metalness: 0.5,
+        envMapIntensity: 1.8,
+      })
+    ), 0, 2.0, 3.06);
+    noShadow(win);
+    villa.add(win);
+    villa.position.set(4, 0, -12.5);
+    roof.add(villa);
+    // fire bowl + loungers
+    const bowl = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.55, 0.4, 0.45, 16),
+      matDark
     );
-    roof.add(box(2.6, 0.45, 0.9, sofaMat, 4.5, 0.22, -1.4));
-    roof.add(box(2.6, 0.5, 0.2, sofaMat, 4.5, 0.65, -0.95));
-    roof.add(box(0.9, 0.45, 2.2, sofaMat, 2.6, 0.22, -3.2));
-    roof.add(box(0.8, 0.3, 0.8, matMetal, 4.4, 0.18, -2.6));
+    bowl.position.set(5, 0.25, -3.5);
+    roof.add(bowl);
+    const loungerMat = track(
+      new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: 0.8 })
+    );
+    for (const lx of [8.2, 10.4]) {
+      roof.add(box(0.9, 0.18, 2.3, loungerMat, lx, 0.3, -4));
+      const backRest = box(0.9, 0.9, 0.12, loungerMat, lx, 0.7, -2.95);
+      backRest.rotation.x = -0.5;
+      roof.add(backRest);
+    }
     // helipad
     const heli = new THREE.Mesh(
-      new THREE.CircleGeometry(2.6, 28),
+      new THREE.CircleGeometry(2.8, 28),
       track(new THREE.MeshBasicMaterial({ map: track(helipadTexture()), transparent: true }))
     );
     heli.rotation.x = -Math.PI / 2;
-    heli.position.set(9.5, 0.04, 3.5);
+    heli.position.set(9.5, 0.02, 4.5);
+    noShadow(heli);
     roof.add(heli);
   }
   scene.add(roof);
-  const fireLight = new THREE.PointLight(0xff8030, 0, 14);
-  fireLight.position.copy(STOP.roof).add(v(4.5, 1.2, -4));
-  const poolLight = new THREE.PointLight(0x22c8e0, 0, 12);
-  poolLight.position.copy(STOP.roof).add(v(-6.5, 1.0, -2.5));
-  const roofFill = new THREE.PointLight(0xcdd8ee, 0, 30);
-  roofFill.position.copy(STOP.roof).add(v(0, 7, 4));
-  scene.add(fireLight, poolLight, roofFill);
+  const fireLight = new THREE.PointLight(0xff8030, 0, 9);
+  fireLight.position.copy(STOP.roof).add(v(5, 1.1, -3.5));
+  scene.add(fireLight);
 
-  // fire particles
-  const FIRE_N = 90;
+  const FIRE_N = 70;
   const fireGeo = track(new THREE.BufferGeometry());
   const firePos = new Float32Array(FIRE_N * 3);
   const fireSeed = new Float32Array(FIRE_N);
   for (let i = 0; i < FIRE_N; i++) {
     fireSeed[i] = Math.random();
-    firePos[i * 3] = STOP.roof.x + 4.5 + (Math.random() - 0.5) * 0.8;
-    firePos[i * 3 + 1] = STOP.roof.y + 0.3 + Math.random() * 0.9;
-    firePos[i * 3 + 2] = STOP.roof.z - 4.5 + (Math.random() - 0.5) * 0.5;
+    firePos[i * 3] = STOP.roof.x + 5 + (Math.random() - 0.5) * 0.6;
+    firePos[i * 3 + 1] = STOP.roof.y + 0.5 + Math.random() * 0.7;
+    firePos[i * 3 + 2] = STOP.roof.z - 3.5 + (Math.random() - 0.5) * 0.4;
   }
   fireGeo.setAttribute("position", new THREE.BufferAttribute(firePos, 3));
   const fireMat = track(
     new THREE.PointsMaterial({
-      color: 0xff9a40,
-      size: 0.14,
+      color: 0xff7a28,
+      size: 0.12,
       transparent: true,
-      opacity: 0.9,
+      opacity: 0.85,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     })
   );
-  scene.add(new THREE.Points(fireGeo, fireMat));
+  const firePts = new THREE.Points(fireGeo, fireMat);
+  noShadow(firePts);
+  scene.add(firePts);
 
-  // city skyline below & beyond the roof
-  {
-    const N = lowPower ? 90 : 170;
-    const cityTex = track(cityWindowsTexture());
-    const cityMat = track(new THREE.MeshBasicMaterial({ map: cityTex }));
-    const inst = new THREE.InstancedMesh(
-      track(new THREE.BoxGeometry(1, 1, 1)),
-      cityMat,
-      N
-    );
-    const m = new THREE.Matrix4();
-    for (let i = 0; i < N; i++) {
-      const cx = (Math.random() - 0.5) * 170;
-      const cz = STOP.roof.z - 22 - Math.random() * 90;
-      // keep a gap right behind the roof so the platform reads clearly
-      const ch = 4 + Math.random() * 19;
-      const cw = 2.5 + Math.random() * 4;
-      m.makeScale(cw, ch, cw);
-      m.setPosition(cx, ch / 2 - 2, cz);
-      inst.setMatrixAt(i, m);
+  /* Shadow flags: everything casts/receives unless flagged. */
+  scene.traverse((obj) => {
+    if (obj instanceof THREE.Mesh && !obj.userData.noShadow) {
+      obj.castShadow = true;
+      obj.receiveShadow = true;
     }
-    inst.instanceMatrix.needsUpdate = true;
-    scene.add(inst);
-  }
+  });
 
   /* Curves through the waypoints */
   const camCurve = new THREE.CatmullRomCurve3(CAM_POINTS, false, "centripetal", 0.6);
@@ -1207,6 +1206,7 @@ export function createOdysseyWorld(
 
   const camPos = new THREE.Vector3();
   const camTarget = new THREE.Vector3();
+  const SUN_OFFSET = v(34, 52, 26);
 
   const frame = () => {
     if (disposed) return;
@@ -1232,92 +1232,68 @@ export function createOdysseyWorld(
     );
     camera.lookAt(camTarget);
 
-    /* Chapter weights drive every light & effect */
-    const w0 = bell(f, 0), w1 = bell(f, 1), w2 = bell(f, 2), w3 = bell(f, 3);
+    // Sun shadow frustum follows the action so the map stays sharp
+    sun.position.copy(camTarget).add(SUN_OFFSET);
+    sun.target.position.copy(camTarget);
+
+    const w1 = bell(f, 1), w2 = bell(f, 2);
     const w4 = bell(f, 4), w5 = bell(f, 5), w6 = bell(f, 6);
 
-    // 0 · sign: gentle bob + neon pulse
-    signGroup.position.y = STOP.sign.y + Math.sin(time * 0.8) * 0.15;
-    const signPulse = 0.9 + Math.sin(time * 2.2) * 0.1;
-    signLightA.intensity = 60 * w0 * signPulse;
-    signLightB.intensity = 50 * w0 * signPulse;
-
-    // 1 · dev room: lamp clicks on with a flicker, monitors hum
-    const lampOn = w1 < 0.45 ? flicker(time, 1) : 1;
-    lampLight.intensity = 26 * w1 * lampOn;
-    monLight.intensity = 14 * w1;
+    // 1 · monitors hum
+    monLight.intensity = 4 * w1;
     for (let i = 0; i < monitorMats.length; i++) {
       const hum = 0.85 + 0.15 * Math.sin(time * (3 + i) + i * 2.1);
-      monitorMats[i].color.setScalar(0.75 + 0.45 * w1 * hum);
+      monitorMats[i].color.setScalar(0.8 + 0.4 * w1 * hum);
     }
 
-    // 2 · corridor lights + LED blinking
-    corrLightA.intensity = 90 * w2;
-    corrLightB.intensity = 90 * w2;
+    // 2 · LED blinking
     if (w2 > 0.02) {
       for (const led of leds) {
-        led.mesh.visible =
-          Math.sin(time * led.speed + led.phase) > -0.35;
+        led.mesh.visible = Math.sin(time * led.speed + led.phase) > -0.35;
       }
     }
 
-    // 3 · spotlight snaps on over the guitar
-    const spotOn = w3 < 0.4 ? flicker(time, 3) : 1;
-    spot.intensity = 105 * w3 * spotOn;
-    rimLight.intensity = 30 * w3;
-    beamMat.opacity = 0.075 * w3 * spotOn;
-    stage.rotation.y = Math.sin(time * 0.25) * 0.06;
-
-    // 4 · garage: door opens, interior light, headlights flare, underglow,
-    //     and the future car hovers off the slab
+    // 4 · garage: door opens, headlights flare, future car hovers
     const doorT = smoothstep(clamp01((w4 - 0.12) / 0.5));
     doorPivot.rotation.x = -doorT * 1.65;
     garageLight2.intensity = garageLight.intensity =
-      55 * smoothstep(clamp01((w4 - 0.18) / 0.4));
-    drivewayLight.intensity = 26 * doorT;
+      30 * smoothstep(clamp01((w4 - 0.18) / 0.4));
     const hlOn = w4 > 0.55 ? (w4 < 0.75 ? flicker(time, 4) : 1) : 0;
     for (const hl of headlights) hl.intensity = 40 * hlOn;
     headlightMatOn.opacity = 0.85 * hlOn;
-    underglowMat.opacity = 0.5 * smoothstep(clamp01((w4 - 0.35) / 0.4)) *
+    underglowMat.opacity =
+      0.4 * smoothstep(clamp01((w4 - 0.35) / 0.4)) *
       (0.85 + 0.15 * Math.sin(time * 3.2));
-    superCar.position.y =
-      0.12 + doorT * (0.22 + 0.08 * Math.sin(time * 1.6));
+    superCar.position.y = 0.2 + doorT * (0.22 + 0.08 * Math.sin(time * 1.6));
 
-    // 5 · snow: aurora + moonlight + snowfall
-    auroraMat.uniforms.uTime.value = time;
-    auroraMat.uniforms.uIntensity.value = w5;
-    moonLight.intensity = 170 * w5;
-    boardLight.intensity = 12 * w5;
+    // 5 · snowfall
     if (w5 > 0.02 && !opts.reducedMotion) {
       const sp = snowGeo.attributes.position.array as Float32Array;
       for (let i = 0; i < SNOW_N; i++) {
         sp[i * 3 + 1] -= snowSpeed[i] * dt;
-        sp[i * 3] += Math.sin(time * 0.8 + i) * dt * 0.35;
-        if (sp[i * 3 + 1] < 0) sp[i * 3 + 1] = 15 + Math.random() * 2;
+        sp[i * 3] += Math.sin(time * 0.8 + i) * dt * 0.3;
+        if (sp[i * 3 + 1] < STOP.snow.y) {
+          sp[i * 3 + 1] = STOP.snow.y + 13 + Math.random() * 2;
+        }
       }
       snowGeo.attributes.position.needsUpdate = true;
     }
 
-    // 6 · rooftop: fire flicker, pool shimmer, flames rise
-    fireLight.intensity = (10 + 5 * Math.sin(time * 9) * Math.sin(time * 23)) * w6;
-    poolLight.intensity = 14 * w6;
-    roofFill.intensity = 48 * w6;
-    poolMat.opacity = 0.7 + 0.15 * Math.sin(time * 1.8);
-    fireMat.opacity = 0.9 * Math.min(1, w6 * 2);
+    // 6 · fire bowl
+    fireLight.intensity = (4 + 2.5 * Math.sin(time * 9) * Math.sin(time * 23)) * w6;
+    fireMat.opacity = 0.85 * Math.min(1, w6 * 2);
     if (w6 > 0.02 && !opts.reducedMotion) {
       const fp2 = fireGeo.attributes.position.array as Float32Array;
       for (let i = 0; i < FIRE_N; i++) {
-        fp2[i * 3 + 1] += (0.9 + fireSeed[i]) * dt;
-        fp2[i * 3] += Math.sin(time * 6 + fireSeed[i] * 40) * dt * 0.12;
-        if (fp2[i * 3 + 1] > STOP.roof.y + 1.5 + fireSeed[i] * 0.6) {
-          fp2[i * 3 + 1] = STOP.roof.y + 0.25;
-          fp2[i * 3] = STOP.roof.x + 4.5 + (Math.random() - 0.5) * 0.8;
+        fp2[i * 3 + 1] += (0.8 + fireSeed[i]) * dt;
+        fp2[i * 3] += Math.sin(time * 6 + fireSeed[i] * 40) * dt * 0.1;
+        if (fp2[i * 3 + 1] > STOP.roof.y + 1.3 + fireSeed[i] * 0.5) {
+          fp2[i * 3 + 1] = STOP.roof.y + 0.45;
+          fp2[i * 3] = STOP.roof.x + 5 + (Math.random() - 0.5) * 0.6;
         }
       }
       fireGeo.attributes.position.needsUpdate = true;
     }
-
-    stars.rotation.y = time * 0.004;
 
     composer.render();
     raf = requestAnimationFrame(frame);
