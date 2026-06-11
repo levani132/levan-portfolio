@@ -4,21 +4,6 @@ import { motion } from "framer-motion";
 import { GraduationCap } from "lucide-react";
 import { useI18n } from "@/context/i18n";
 
-const degrees = [
-  {
-    degree: "Master of Business Administration (MBA)",
-    school: "Free University of Tbilisi",
-    faculty: "Business School",
-    type: "Master",
-  },
-  {
-    degree: "Bachelor in Mathematics & Computer Science",
-    school: "Free University of Tbilisi",
-    faculty: "Mathematics and Computer Science (MACS)",
-    type: "Bachelor",
-  },
-];
-
 export default function Education() {
   const { t } = useI18n();
 
@@ -62,7 +47,7 @@ export default function Education() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
               transition={{ duration: 0.5, delay: i * 0.15 }}
-              className="glass-card group relative overflow-hidden rounded-2xl p-6"
+              className="glass-card glass-lift group relative overflow-hidden rounded-2xl p-6"
             >
               {/* Gradient accent */}
               <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-sky-500/5 transition-all group-hover:bg-sky-500/10" />

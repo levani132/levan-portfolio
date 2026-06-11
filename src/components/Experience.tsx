@@ -109,11 +109,11 @@ function JobCard({ job, index }: { job: Job; index: number }) {
       className="group relative"
     >
       {/* Timeline connector */}
-      <div className="absolute left-4.75 top-12 bottom-0 w-px bg-linear-to-b from-sky-500/50 to-transparent dark:from-sky-500/30" />
+      <div className="absolute left-4.75 top-12 bottom-0 w-px bg-linear-to-b from-sky-400/60 via-indigo-400/30 to-transparent dark:from-sky-400/40 dark:via-violet-400/20" />
 
       <div className="relative flex gap-6">
         {/* Timeline dot */}
-        <div className="glass-card relative z-10 mt-1.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+        <div className="glass-card relative z-10 mt-1.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full shadow-[0_0_18px_rgba(56,189,248,0.35)] transition-shadow group-hover:shadow-[0_0_26px_rgba(56,189,248,0.6)]">
           <Building2 size={16} className="text-sky-400" />
         </div>
 

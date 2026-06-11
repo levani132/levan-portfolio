@@ -10,6 +10,7 @@ import { usePathname, useRouter } from "next/navigation";
 export default function Navigation() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [active, setActive] = useState("");
   const { locale, t } = useI18n();
   const { theme, toggle: toggleTheme } = useTheme();
 
@@ -25,6 +26,33 @@ export default function Navigation() {
     const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Scrollspy — highlight the nav link of the section currently in the
+  // middle band of the viewport. Clears when scrolled back to the hero.
+  useEffect(() => {
+    const ids = ["about", "experience", "skills", "projects", "education"];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) setActive(`#${entry.target.id}`);
+        }
+      },
+      { rootMargin: "-35% 0px -55% 0px" }
+    );
+    const sections = ids
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+    sections.forEach((el) => observer.observe(el));
+
+    const clearOnTop = () => {
+      if (window.scrollY < window.innerHeight * 0.4) setActive("");
+    };
+    window.addEventListener("scroll", clearOnTop, { passive: true });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", clearOnTop);
+    };
   }, []);
 
   return (
@@ -54,15 +82,26 @@ export default function Navigation() {
             <span>L<span className="text-sky-500 dark:text-sky-400">.</span>B</span>
           </a>
 
-          {/* Center nav links */}
+          {/* Center nav links — active section gets a sliding glass pill */}
           <ul className="flex items-center gap-1">
             {navLinks.map((link) => (
               <li key={link.href}>
                 <a
                   href={link.href}
-                  className="rounded-full px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-black/5 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white"
+                  className={`relative rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                    active === link.href
+                      ? "text-sky-600 dark:text-sky-300"
+                      : "text-zinc-700 hover:bg-black/5 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white"
+                  }`}
                 >
-                  {link.label}
+                  {active === link.href && (
+                    <motion.span
+                      layoutId="nav-active"
+                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                      className="absolute inset-0 rounded-full bg-sky-400/10 ring-1 ring-inset ring-sky-400/30 shadow-[0_0_16px_rgba(56,189,248,0.25)]"
+                    />
+                  )}
+                  <span className="relative">{link.label}</span>
                 </a>
               </li>
             ))}

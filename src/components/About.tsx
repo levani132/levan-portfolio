@@ -81,7 +81,7 @@ export default function About() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
               transition={{ duration: 0.4, delay: i * 0.08 }}
-              className={`glass-card group rounded-2xl p-6 ${card.span}`}
+              className={`glass-card glass-lift group rounded-2xl p-6 ${card.span}`}
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/10 text-sky-500 transition-colors group-hover:bg-sky-500/20">
                 <card.icon size={20} />

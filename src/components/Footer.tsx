@@ -6,12 +6,12 @@ export default function Footer() {
   const { t } = useI18n();
 
   return (
-    <footer className="border-t border-zinc-200 dark:border-zinc-800">
-      <div className="mx-auto max-w-5xl px-6 py-12">
+    <footer className="px-4 pb-6">
+      <div className="glass-card mx-auto max-w-5xl rounded-3xl px-6 py-12">
         <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
           <div>
             <span className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-              L<span className="text-sky-500">.</span>B
+              L<span className="aurora-text">.</span>B
             </span>
             <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
               {t("footer.title")}
@@ -42,7 +42,7 @@ export default function Footer() {
             </a>
           </div>
         </div>
-        <div className="mt-8 border-t border-zinc-200 pt-8 text-center text-sm text-zinc-400 dark:border-zinc-800 dark:text-zinc-500">
+        <div className="mt-8 border-t border-zinc-200/60 pt-8 text-center text-sm text-zinc-400 dark:border-white/10 dark:text-zinc-500">
           &copy; {new Date().getFullYear()} Levan Beroshvili. {t("footer.rights")}
         </div>
       </div>

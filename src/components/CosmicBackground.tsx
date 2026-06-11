@@ -64,7 +64,7 @@ export default function CosmicBackground() {
     let darkMode = document.documentElement.classList.contains("dark");
     // Materials to keep in sync with the theme — they get pushed into this
     // array as they're created below.
-    const themedMaterials: THREE.PointsMaterial[] = [];
+    const themedMaterials: THREE.ShaderMaterial[] = [];
     const applyThemeBlending = () => {
       const mode = darkMode
         ? THREE.AdditiveBlending
@@ -83,9 +83,8 @@ export default function CosmicBackground() {
       attributeFilter: ["class"],
     });
 
-    const circleSprite = makeCircleTexture();
-    const haloSprite = makeHaloTexture();
     const glowSprite = makeGlowTexture();
+    const pixelRatio = renderer.getPixelRatio();
 
     // ── 1. Starfield (deep background, camera flies through it) ─────────────
     const STAR_COUNT = 3500;
@@ -115,17 +114,25 @@ export default function CosmicBackground() {
         starCol[i * 3 + 2] = 1.0;
       }
     }
+    // Per-star size variety + twinkle phase — a few big bright stars among
+    // many faint ones reads far more "real sky" than uniform dots.
+    const starScale = new Float32Array(STAR_COUNT);
+    const starPhase = new Float32Array(STAR_COUNT);
+    for (let i = 0; i < STAR_COUNT; i++) {
+      const big = Math.random();
+      starScale[i] = big > 0.96 ? 1.8 + Math.random() : 0.45 + Math.random();
+      starPhase[i] = Math.random() * 10;
+    }
     starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
     starGeo.setAttribute("color", new THREE.BufferAttribute(starCol, 3));
-    const starMat = new THREE.PointsMaterial({
-      size: 2.2,
-      vertexColors: true,
-      map: circleSprite,
-      transparent: true,
+    starGeo.setAttribute("aScale", new THREE.BufferAttribute(starScale, 1));
+    starGeo.setAttribute("aPhase", new THREE.BufferAttribute(starPhase, 1));
+    const starMat = makeParticleMaterial({
+      size: 3.4,
       opacity: 0.9,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      sizeAttenuation: true,
+      twinkle: 0.85,
+      soft: 0,
+      pixelRatio,
     });
     themedMaterials.push(starMat);
     const stars = new THREE.Points(starGeo, starMat);
@@ -189,21 +196,27 @@ export default function CosmicBackground() {
     colAttr.setUsage(THREE.DynamicDrawUsage);
     featGeo.setAttribute("position", posAttr);
     featGeo.setAttribute("color", colAttr);
+    // Per-particle size + twinkle phase. Core and halo share the geometry,
+    // so each particle's spark and its bloom twinkle in perfect sync.
+    const featScale = new Float32Array(N);
+    const featPhase = new Float32Array(N);
+    for (let i = 0; i < N; i++) {
+      featScale[i] = 0.65 + r[i] * 0.9;
+      featPhase[i] = ((r[i] * 997.13) % 1) * 10;
+    }
+    featGeo.setAttribute("aScale", new THREE.BufferAttribute(featScale, 1));
+    featGeo.setAttribute("aPhase", new THREE.BufferAttribute(featPhase, 1));
 
-    // Particles — tight bright sparks. Smaller particle size keeps each
-    // one as a punchy little dot of light (not a soft blob), and full
-    // opacity pushes the sprite's bright-core gradient through. Pure-primary
-    // colors keep hue stable when 2–3 overlap additively; the sprite halo
-    // gives bloom around bright zones.
-    const featMat = new THREE.PointsMaterial({
-      size: 2.8,
-      vertexColors: true,
-      map: circleSprite,
-      transparent: true,
+    // Particles — tight bright sparks rendered by a custom shader: procedural
+    // radial falloff (no texture fetch), per-particle size variety, and a
+    // gentle brightness/size twinkle. Pure-primary colors keep hue stable
+    // when 2–3 overlap additively.
+    const featMat = makeParticleMaterial({
+      size: 4.4,
       opacity: 1.0,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      sizeAttenuation: true,
+      twinkle: 0.4,
+      soft: 0,
+      pixelRatio,
     });
     themedMaterials.push(featMat);
 
@@ -212,18 +225,14 @@ export default function CosmicBackground() {
     // layer, so each particle automatically has BOTH a bright spark core
     // AND a wider soft halo sitting underneath. Together they read as the
     // reel-style "bright glowing star" instead of a flat dot.
-    const haloMat = new THREE.PointsMaterial({
-      // Bigger radius spreads each particle's glow further into a soft bloom.
-      // We compensate by lowering opacity so the total light per particle
-      // stays similar — wider but gentler, not wider AND brighter.
-      size: 22,
-      vertexColors: true,
-      map: haloSprite,
-      transparent: true,
+    const haloMat = makeParticleMaterial({
+      // Wide radius spreads each particle's glow into soft bloom; low opacity
+      // keeps total light per particle similar — wider but gentler.
+      size: 34,
       opacity: 0.22,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      sizeAttenuation: true,
+      twinkle: 0.4,
+      soft: 1,
+      pixelRatio,
     });
     themedMaterials.push(haloMat);
     const halo = new THREE.Points(featGeo, haloMat);
@@ -252,6 +261,109 @@ export default function CosmicBackground() {
     core.scale.set(280, 280, 1);
     scene.add(core);
 
+    // ── Shooting stars ──────────────────────────────────────────────────────
+    // A small pool of comets that occasionally streak across the deep field.
+    // Each is a Line whose trail fades to black along its length — under
+    // additive blending black is invisible, so we get per-vertex alpha for
+    // free. The trail needs no history: it's just pos - vel * k.
+    const COMET_COUNT = 5;
+    const TRAIL = 24;
+    interface Comet {
+      line: THREE.Line;
+      posArr: Float32Array;
+      colArr: Float32Array;
+      pos: THREE.Vector3;
+      vel: THREE.Vector3;
+      tint: THREE.Color;
+      life: number;
+      maxLife: number;
+      delay: number;
+    }
+    const cometMat = new THREE.LineBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const comets: Comet[] = [];
+    for (let i = 0; i < COMET_COUNT; i++) {
+      const geo = new THREE.BufferGeometry();
+      const posArr = new Float32Array(TRAIL * 3);
+      const colArr = new Float32Array(TRAIL * 3);
+      const pa = new THREE.BufferAttribute(posArr, 3);
+      const ca = new THREE.BufferAttribute(colArr, 3);
+      pa.setUsage(THREE.DynamicDrawUsage);
+      ca.setUsage(THREE.DynamicDrawUsage);
+      geo.setAttribute("position", pa);
+      geo.setAttribute("color", ca);
+      const line = new THREE.Line(geo, cometMat);
+      line.visible = false;
+      line.frustumCulled = false;
+      scene.add(line);
+      comets.push({
+        line,
+        posArr,
+        colArr,
+        pos: new THREE.Vector3(),
+        vel: new THREE.Vector3(),
+        tint: new THREE.Color(),
+        life: 0,
+        maxLife: 0,
+        delay: 2 + Math.random() * 8,
+      });
+    }
+    const launchComet = (c: Comet) => {
+      const side = Math.random() < 0.5 ? -1 : 1;
+      c.pos.set(
+        side * (150 + Math.random() * 450),
+        180 + Math.random() * 260,
+        camera.position.z - 500 - Math.random() * 400
+      );
+      c.vel.set(
+        -side * (260 + Math.random() * 320),
+        -(180 + Math.random() * 260),
+        (Math.random() - 0.5) * 120
+      );
+      // Cool white-blue, occasionally warm
+      if (Math.random() < 0.25) c.tint.setRGB(1.0, 0.8, 0.55);
+      else c.tint.setRGB(0.75 + Math.random() * 0.25, 0.9, 1.0);
+      c.life = 0;
+      c.maxLife = 1.4 + Math.random() * 1.2;
+    };
+    const updateComets = (dt: number) => {
+      for (const c of comets) {
+        if (c.delay > 0) {
+          c.delay -= dt;
+          if (c.delay <= 0) launchComet(c);
+          else continue;
+        }
+        c.life += dt;
+        if (c.life >= c.maxLife) {
+          c.line.visible = false;
+          c.delay = 4 + Math.random() * 10;
+          continue;
+        }
+        c.pos.addScaledVector(c.vel, dt);
+        // Fade in fast, fade out slow over the comet's life
+        const lt = c.life / c.maxLife;
+        const env = Math.sin(Math.PI * Math.min(1, lt)) ** 0.7;
+        for (let j = 0; j < TRAIL; j++) {
+          const k = j * 0.014;
+          c.posArr[j * 3] = c.pos.x - c.vel.x * k;
+          c.posArr[j * 3 + 1] = c.pos.y - c.vel.y * k;
+          c.posArr[j * 3 + 2] = c.pos.z - c.vel.z * k;
+          const fade = env * (1 - j / TRAIL) ** 2;
+          c.colArr[j * 3] = c.tint.r * fade;
+          c.colArr[j * 3 + 1] = c.tint.g * fade;
+          c.colArr[j * 3 + 2] = c.tint.b * fade;
+        }
+        c.line.geometry.attributes.position.needsUpdate = true;
+        c.line.geometry.attributes.color.needsUpdate = true;
+        // Additive trails over white wash out — comets are dark-mode only
+        c.line.visible = darkMode;
+      }
+    };
+
     // ── Scroll tracking (smoothed) ──────────────────────────────────────────
     let scrollProgress = 0;
     let targetScroll = 0;
@@ -263,13 +375,25 @@ export default function CosmicBackground() {
     updateScroll();
     window.addEventListener("scroll", updateScroll, { passive: true });
 
-    // ── Mouse parallax ──────────────────────────────────────────────────────
-    const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
+    // ── Mouse parallax + particle repulsion ─────────────────────────────────
+    const mouse = { x: 0, y: 0, tx: 0, ty: 0, active: false };
     const onMouseMove = (e: MouseEvent) => {
       mouse.tx = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.ty = (e.clientY / window.innerHeight) * 2 - 1;
+      mouse.active = true;
     };
     window.addEventListener("mousemove", onMouseMove, { passive: true });
+
+    // Scratch objects for projecting the cursor onto the z=0 plane and
+    // transforming it into the rotating feature group's local space.
+    const _mNdc = new THREE.Vector3();
+    const _mDir = new THREE.Vector3();
+    const _mWorld = new THREE.Vector3();
+    const _mLocal = new THREE.Vector3();
+    const _mInv = new THREE.Matrix4();
+    const REPEL_R = 110;
+    const REPEL_R2 = REPEL_R * REPEL_R;
+    const REPEL_STRENGTH = 46;
 
     // ── Resize ──────────────────────────────────────────────────────────────
     const onResize = () => {
@@ -282,7 +406,7 @@ export default function CosmicBackground() {
     window.addEventListener("resize", onResize);
 
     // ── Animation loop ──────────────────────────────────────────────────────
-    const clock = new THREE.Clock();
+    let lastFrame = performance.now();
     let rafId = 0;
     let time = 0;
     // Accumulated rotation — incremental so we can vary the rate per shape
@@ -290,8 +414,14 @@ export default function CosmicBackground() {
     let rotY = 0;
 
     const render = () => {
-      const dt = Math.min(0.05, clock.getDelta() || 0.016);
+      const nowMs = performance.now();
+      const dt = Math.min(0.05, (nowMs - lastFrame) / 1000 || 0.016);
+      lastFrame = nowMs;
       time += dt;
+
+      starMat.uniforms.uTime.value = time;
+      featMat.uniforms.uTime.value = time;
+      haloMat.uniforms.uTime.value = time;
 
       // Smooth scroll progress so morphs feel buttery
       scrollProgress += (targetScroll - scrollProgress) * 0.07;
@@ -346,6 +476,25 @@ export default function CosmicBackground() {
       const cascadeSpeed = 0;
       const nebulaSpeed = 70;
 
+      // Project the cursor onto the z=0 plane, then into the rotating
+      // group's local space, so repulsion can run directly on featPos.
+      let repel = false;
+      if (mouse.active) {
+        _mNdc.set(mouse.x, -mouse.y, 0.5).unproject(camera);
+        _mDir.copy(_mNdc).sub(camera.position).normalize();
+        if (Math.abs(_mDir.z) > 1e-4) {
+          const tPlane = -camera.position.z / _mDir.z;
+          _mWorld.copy(camera.position).addScaledVector(_mDir, tPlane);
+          featureGroup.updateMatrixWorld();
+          _mInv.copy(featureGroup.matrixWorld).invert();
+          _mLocal.copy(_mWorld).applyMatrix4(_mInv);
+          repel = true;
+        }
+      }
+      const mlx = _mLocal.x,
+        mly = _mLocal.y,
+        mlz = _mLocal.z;
+
       // Per-particle live wobble + per-shape flow — runs every frame.
       // The wobble is "strand-coherent": neighbors in the same strand share
       // similar phase, so the dense strands of particles undulate together
@@ -394,6 +543,23 @@ export default function CosmicBackground() {
         featPos[i3 + 2] =
           az + (bz - az) * eased + wobZ + wavFlowZ * waveAmt;
 
+        // Cursor repulsion — particles near the mouse get gently pushed
+        // aside with a smooth falloff, like parting a cloud of fireflies.
+        if (repel) {
+          const dxm = featPos[i3] - mlx;
+          const dym = featPos[i3 + 1] - mly;
+          const dzm = featPos[i3 + 2] - mlz;
+          const d2 = dxm * dxm + dym * dym + dzm * dzm;
+          if (d2 < REPEL_R2 && d2 > 1e-6) {
+            const d = Math.sqrt(d2);
+            const f = 1 - d / REPEL_R;
+            const push = (f * f * REPEL_STRENGTH) / d;
+            featPos[i3] += dxm * push;
+            featPos[i3 + 1] += dym * push;
+            featPos[i3 + 2] += dzm * push;
+          }
+        }
+
         featCol[i3] = CA[i3] + (CB[i3] - CA[i3]) * eased;
         featCol[i3 + 1] = CA[i3 + 1] + (CB[i3 + 1] - CA[i3 + 1]) * eased;
         featCol[i3 + 2] = CA[i3 + 2] + (CB[i3 + 2] - CA[i3 + 2]) * eased;
@@ -423,18 +589,20 @@ export default function CosmicBackground() {
       if (darkMode) {
         coreMat.opacity =
           Math.max(ringWeight, spiralWeight) * 0.95 * pulse;
-        starMat.opacity = 0.9;
-        featMat.opacity = 1.0;
-        haloMat.opacity = 0.22; // wider radius, gentler intensity
+        starMat.uniforms.uOpacity.value = 0.9;
+        featMat.uniforms.uOpacity.value = 1.0;
+        haloMat.uniforms.uOpacity.value = 0.22; // wide radius, gentle intensity
       } else {
         // Light mode: normal blending paints colored dots over white. We
         // need higher per-particle opacity (no additive accumulation) but
         // hide the additive-only effects (stars / core glow / halo).
         coreMat.opacity = 0;
-        starMat.opacity = 0;
-        featMat.opacity = 0.85;
-        haloMat.opacity = 0; // additive bloom doesn't work over white
+        starMat.uniforms.uOpacity.value = 0;
+        featMat.uniforms.uOpacity.value = 0.85;
+        haloMat.uniforms.uOpacity.value = 0; // additive bloom doesn't work over white
       }
+
+      updateComets(dt);
 
       renderer.render(scene, camera);
       if (!reduced) rafId = requestAnimationFrame(render);
@@ -460,8 +628,8 @@ export default function CosmicBackground() {
       featMat.dispose();
       haloMat.dispose();
       coreMat.dispose();
-      circleSprite.dispose();
-      haloSprite.dispose();
+      cometMat.dispose();
+      for (const c of comets) c.line.geometry.dispose();
       glowSprite.dispose();
     };
   }, []);
@@ -927,58 +1095,76 @@ function shapeWeight(morphIdx: number, shapeIdx: number) {
   return Math.max(0, 1 - Math.abs(d));
 }
 
-function makeCircleTexture(): THREE.Texture {
-  // Tight bright "spark" sprite — the bright punchy core of each particle.
-  // Paired with the wider halo sprite below to produce per-particle bloom.
-  const size = 64;
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-  const grad = ctx.createRadialGradient(
-    size / 2,
-    size / 2,
-    0,
-    size / 2,
-    size / 2,
-    size / 2
-  );
-  grad.addColorStop(0.0, "rgba(255,255,255,1.0)");
-  grad.addColorStop(0.25, "rgba(255,255,255,0.9)");
-  grad.addColorStop(0.55, "rgba(255,255,255,0.35)");
-  grad.addColorStop(1.0, "rgba(255,255,255,0)");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, size, size);
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.needsUpdate = true;
-  return tex;
-}
-
-/** Wide soft halo sprite — drawn as a separate Points layer behind the
- * spark layer so each particle is core + halo, like a glowing star. */
-function makeHaloTexture(): THREE.Texture {
-  const size = 128;
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-  const grad = ctx.createRadialGradient(
-    size / 2,
-    size / 2,
-    0,
-    size / 2,
-    size / 2,
-    size / 2
-  );
-  // Brighter, more sustained falloff than the spark — this is the glow.
-  grad.addColorStop(0.0, "rgba(255,255,255,1.0)");
-  grad.addColorStop(0.2, "rgba(255,255,255,0.55)");
-  grad.addColorStop(0.5, "rgba(255,255,255,0.18)");
-  grad.addColorStop(0.85, "rgba(255,255,255,0.03)");
-  grad.addColorStop(1.0, "rgba(255,255,255,0)");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, size, size);
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.needsUpdate = true;
-  return tex;
+/** Custom shader for all particle layers — replaces PointsMaterial.
+ *
+ * What it buys over PointsMaterial + canvas sprite:
+ *  • per-particle size variety (aScale) — a real "sky" has big and small stars
+ *  • per-particle twinkle (aPhase) — size AND brightness shimmer, GPU-side
+ *  • procedural falloff (no texture fetch): `soft: 0` is a tight spark with a
+ *    hot center, `soft: 1` is a wide gaussian-ish bloom for the halo layer
+ *
+ * Core + halo layers share geometry, so a particle's spark and bloom twinkle
+ * in sync. Blending is switched between Additive/Normal by the theme observer.
+ */
+function makeParticleMaterial(opts: {
+  size: number;
+  opacity: number;
+  twinkle: number;
+  soft: 0 | 1;
+  pixelRatio: number;
+}): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    vertexColors: true,
+    uniforms: {
+      uTime: { value: 0 },
+      uSize: { value: opts.size },
+      uOpacity: { value: opts.opacity },
+      uTwinkle: { value: opts.twinkle },
+      uSoft: { value: opts.soft },
+      uPixelRatio: { value: opts.pixelRatio },
+    },
+    vertexShader: /* glsl */ `
+      attribute float aScale;
+      attribute float aPhase;
+      uniform float uTime;
+      uniform float uSize;
+      uniform float uTwinkle;
+      uniform float uPixelRatio;
+      varying vec3 vColor;
+      varying float vTw;
+      void main() {
+        vColor = color;
+        // 0..1 shimmer, unique speed + phase per particle
+        float s = 0.5 + 0.5 * sin(uTime * (1.2 + aPhase * 0.35) + aPhase * 4.7);
+        float tw = 1.0 - uTwinkle * s;
+        vTw = 0.55 + 0.45 * tw;
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        float ps = uSize * aScale * (0.75 + 0.5 * tw);
+        gl_PointSize = ps * uPixelRatio * (300.0 / -mv.z);
+        gl_Position = projectionMatrix * mv;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform float uOpacity;
+      uniform float uSoft;
+      varying vec3 vColor;
+      varying float vTw;
+      void main() {
+        float d = length(gl_PointCoord - 0.5) * 2.0;
+        if (d > 1.0) discard;
+        float fall = 1.0 - d;
+        // spark: hot core + tight skirt; halo: wide soft bloom
+        float spark = pow(fall, 3.0) + smoothstep(0.4, 0.0, d) * 0.55;
+        float halo = pow(fall, 1.8);
+        float a = mix(spark, halo, uSoft) * uOpacity * vTw;
+        if (a < 0.004) discard;
+        gl_FragColor = vec4(vColor, a);
+      }
+    `,
+  });
 }
 
 function makeGlowTexture(): THREE.Texture {

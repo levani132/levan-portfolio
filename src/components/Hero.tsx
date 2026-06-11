@@ -283,11 +283,19 @@ export default function Hero() {
           </span>
         </div>
 
-        {/* Name with gradient */}
+        {/* Name with aurora gradient + soft glow echo behind it */}
         <h1
-          className="hero-entrance hero-delay-200 mt-8 text-6xl font-bold tracking-tight sm:text-7xl lg:text-8xl"
+          className="hero-entrance hero-delay-200 relative mt-8 text-6xl font-bold tracking-tight sm:text-7xl lg:text-8xl"
         >
-          <span className="gradient-text">{t("hero.firstName")}</span>
+          <span className="relative inline-block">
+            <span
+              aria-hidden
+              className="aurora-text absolute inset-0 blur-2xl opacity-50 dark:opacity-70"
+            >
+              {t("hero.firstName")}
+            </span>
+            <span className="aurora-text relative">{t("hero.firstName")}</span>
+          </span>
           <br />
           <span className="text-zinc-900 dark:text-zinc-100">{t("hero.lastName")}</span>
         </h1>
@@ -325,9 +333,9 @@ export default function Hero() {
           {stats.map((stat) => (
             <div
               key={stat.label}
-              className="glass-card group rounded-2xl p-4"
+              className="glass-card glass-lift group rounded-2xl p-4"
             >
-              <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
+              <div className="bg-linear-to-br from-sky-400 to-indigo-400 bg-clip-text text-3xl font-bold text-transparent dark:from-sky-300 dark:to-violet-400">
                 <AnimatedCounter target={stat.value} suffix={stat.suffix} />
               </div>
               <div className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
@@ -343,7 +351,7 @@ export default function Hero() {
         >
           <a
             href="mailto:lberoshvili9@gmail.com"
-            className="glass-card flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:text-sky-500 dark:text-zinc-200 dark:hover:text-sky-300"
+            className="glass-card flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:scale-105 hover:text-sky-500 dark:text-zinc-200 dark:hover:text-sky-300"
           >
             <Mail size={16} /> {t("hero.getInTouch")}
           </a>
@@ -351,7 +359,7 @@ export default function Hero() {
             href="https://www.linkedin.com/in/levan-beroshvili-75753a110/"
             target="_blank"
             rel="noopener noreferrer"
-            className="glass-card rounded-full p-2.5 text-zinc-600 transition-colors hover:text-sky-500 dark:text-zinc-300 dark:hover:text-sky-300"
+            className="glass-card rounded-full p-2.5 text-zinc-600 transition-colors hover:scale-110 hover:text-sky-500 dark:text-zinc-300 dark:hover:text-sky-300"
           >
             <Linkedin size={18} />
           </a>
@@ -359,7 +367,7 @@ export default function Hero() {
             href="https://github.com/levani132"
             target="_blank"
             rel="noopener noreferrer"
-            className="glass-card rounded-full p-2.5 text-zinc-600 transition-colors hover:text-sky-500 dark:text-zinc-300 dark:hover:text-sky-300"
+            className="glass-card rounded-full p-2.5 text-zinc-600 transition-colors hover:scale-110 hover:text-sky-500 dark:text-zinc-300 dark:hover:text-sky-300"
           >
             <Github size={18} />
           </a>
