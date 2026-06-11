@@ -24,6 +24,7 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 import { FontLoader } from "three/addons/loaders/FontLoader.js";
 import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
+import { Water } from "three/addons/objects/Water.js";
 
 export const CHAPTERS = 7;
 
@@ -36,8 +37,8 @@ const CAM_POINTS = [
   v(8, 2.9, -76),
   v(-16, 2.6, -120),
   v(14, 4.4, -152.5),
-  v(-16, 4.4, -209),
-  v(-4, 13.2, -253),
+  v(-16, 4.0, -210),
+  v(-5, 5.0, -250),
 ];
 const TARGET_POINTS = [
   v(0, 2.4, 0),
@@ -46,7 +47,7 @@ const TARGET_POINTS = [
   v(-16, 1.8, -130),
   v(14, 0.8, -174),
   v(-16, 2.6, -221),
-  v(2, 10.6, -271),
+  v(2, 2.0, -271),
 ];
 
 const STOP = {
@@ -56,10 +57,10 @@ const STOP = {
   guitar: v(-16, 0, -130),
   garage: v(14, 0, -175),
   snow: v(-16, 1.2, -221),
-  roof: v(0, 9, -270),
+  roof: v(0, 1.4, -270),
 };
 
-/* Flat pads carved into the rolling terrain, one per scene. */
+/* Flat pads carved into the estate lawn, one per scene. */
 const PADS = [
   { x: 0, z: 0, h: 0, r: 18 },
   { x: -16, z: -40, h: 0, r: 14 },
@@ -67,8 +68,12 @@ const PADS = [
   { x: -16, z: -130, h: 0, r: 13 },
   { x: 14, z: -175, h: 0, r: 17 },
   { x: -16, z: -221, h: 1.2, r: 17 },
-  { x: 0, z: -270, h: 9, r: 24 },
+  { x: 0, z: -270, h: 1.4, r: 24 },
 ];
+
+/* The big rock: a wobbled-circle plateau that cliffs down into the sea. */
+const ISLE = { x: 0, z: -130, r: 165 };
+const SEA_Y = -22;
 
 function clamp01(x: number) {
   return x < 0 ? 0 : x > 1 ? 1 : x;
@@ -87,14 +92,23 @@ function flicker(time: number, seed: number) {
   return x - Math.floor(x) > 0.42 ? 1 : 0.15;
 }
 
-/** Rolling-hills height field; amplitude grows toward the valley walls. */
+/** Gentle lawn undulation on top of the plateau. */
 function hills(x: number, z: number) {
-  const base =
-    2.0 * Math.sin(x * 0.045) * Math.cos(z * 0.038) +
-    1.3 * Math.sin(x * 0.11 + 1.7) * Math.sin(z * 0.07) +
-    0.5 * Math.sin(x * 0.23) * Math.cos(z * 0.19);
-  const wall = 1 + clamp01((Math.abs(x) - 55) / 60) * 4.5;
-  return base * wall;
+  return (
+    1.1 * Math.sin(x * 0.05) * Math.cos(z * 0.045) +
+    0.5 * Math.sin(x * 0.13 + 1.7) * Math.sin(z * 0.08)
+  );
+}
+
+/** 0 on the plateau → 1 out at sea; the coastline wobbles per angle. */
+function cliffEdge(x: number, z: number) {
+  const dx = x - ISLE.x;
+  const dz = z - ISLE.z;
+  const ang = Math.atan2(dz, dx);
+  const wobble =
+    1 + 0.1 * Math.sin(ang * 3 + 1.7) + 0.05 * Math.sin(ang * 7 + 0.4);
+  const r = Math.hypot(dx, dz) * wobble;
+  return smoothstep(clamp01((r - ISLE.r) / 55));
 }
 
 function terrainHeight(x: number, z: number) {
@@ -108,7 +122,9 @@ function terrainHeight(x: number, z: number) {
       padH = p.h;
     }
   }
-  return hills(x, z) * (1 - padW) + padH * padW;
+  const top = hills(x, z) * (1 - padW) + padH * padW;
+  const e = cliffEdge(x, z);
+  return top * (1 - e) + (SEA_Y - 7) * e;
 }
 
 /* ── Canvas texture helpers ────────────────────────────────────────────── */
@@ -314,7 +330,7 @@ export function createOdysseyWorld(
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xcfe2f2); // until the HDRI arrives
-  scene.fog = new THREE.Fog(0xdfeaf2, 110, 430);
+  scene.fog = new THREE.Fog(0xdfeaf2, 130, 680);
 
   const camera = new THREE.PerspectiveCamera(60, w / h, 0.1, 800);
   camera.position.copy(CAM_POINTS[0]);
@@ -367,8 +383,12 @@ export function createOdysseyWorld(
   };
   const grassD = loadTex("/world/grass_diff.jpg", 60, true);
   const grassN = loadTex("/world/grass_nor.jpg", 60, false);
-  const snowD = loadTex("/world/snow_diff.jpg", 7, true);
-  const snowN = loadTex("/world/snow_nor.jpg", 7, false);
+  const rockD = loadTex("/world/rock_diff.jpg", 26, true);
+  const rockN = loadTex("/world/rock_nor.jpg", 26, false);
+  const plasterD = loadTex("/world/plaster_diff.jpg", 5, true);
+  const plasterN = loadTex("/world/plaster_nor.jpg", 5, false);
+  const pavingD = loadTex("/world/paving_diff.jpg", 1, true);
+  const pavingN = loadTex("/world/paving_nor.jpg", 1, false);
   const concreteD = loadTex("/world/concrete_diff.jpg", 3, true);
   const woodD = loadTex("/world/wood_diff.jpg", 2.5, true);
 
@@ -408,21 +428,51 @@ export function createOdysseyWorld(
     return m;
   };
 
-  /* ── Terrain ── */
+  /* ── The big rock: rock-textured terrain that cliffs into the sea, with
+   * a grass lawn cap hugging the plateau top. ── */
   {
-    const SEG = lowPower ? 96 : 150;
-    const geo = track(new THREE.PlaneGeometry(440, 520, SEG, SEG));
+    const SEG = lowPower ? 110 : 170;
+    const geo = track(new THREE.PlaneGeometry(720, 720, SEG, SEG));
     geo.rotateX(-Math.PI / 2);
     const pos = geo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
-      const z = pos.getZ(i) - 140; // recenter strip over the journey
+      const z = pos.getZ(i) + ISLE.z;
       pos.setZ(i, z);
-      pos.setY(i, terrainHeight(x, z));
+      // Sink the rock below the lawn on the plateau top (the lawn cap is
+      // what's visible there) so coarse interpolation never pokes through;
+      // on the cliff faces (e→1) the rock is the surface.
+      const e = cliffEdge(x, z);
+      pos.setY(i, terrainHeight(x, z) - 0.8 * (1 - e));
     }
     geo.computeVertexNormals();
-    const terrain = new THREE.Mesh(
+    const rock = new THREE.Mesh(
       geo,
+      track(
+        new THREE.MeshStandardMaterial({
+          map: rockD,
+          normalMap: rockN,
+          roughness: 0.95,
+        })
+      )
+    );
+    rock.receiveShadow = true;
+    rock.userData.noShadow = true;
+    scene.add(rock);
+
+    const LSEG = lowPower ? 80 : 130;
+    const lawnGeo = track(new THREE.CircleGeometry(ISLE.r - 3, LSEG, 0, Math.PI * 2));
+    lawnGeo.rotateX(-Math.PI / 2);
+    const lp = lawnGeo.attributes.position;
+    for (let i = 0; i < lp.count; i++) {
+      const x = lp.getX(i);
+      const z = lp.getZ(i) + ISLE.z;
+      lp.setZ(i, z);
+      lp.setY(i, terrainHeight(x, z) + 0.07);
+    }
+    lawnGeo.computeVertexNormals();
+    const lawn = new THREE.Mesh(
+      lawnGeo,
       track(
         new THREE.MeshStandardMaterial({
           map: grassD,
@@ -431,24 +481,131 @@ export function createOdysseyWorld(
         })
       )
     );
-    terrain.receiveShadow = true;
-    terrain.userData.noShadow = true; // receives but doesn't cast
-    scene.add(terrain);
+    lawn.receiveShadow = true;
+    lawn.userData.noShadow = true;
+    scene.add(lawn);
   }
 
-  /* Distant peaks — pushed deep into the fog so they read as hazy ridges */
+  /* ── The sea, out to the horizon ── */
+  let water: Water | null = null;
   {
-    const peakMat = track(
-      new THREE.MeshStandardMaterial({ color: 0x93a9bd, roughness: 1, flatShading: true })
-    );
-    for (const [px, pz, ph, pr] of [
-      [-260, -120, 85, 150], [280, -220, 95, 170], [-290, -300, 80, 160], [260, -20, 70, 140],
-    ]) {
-      const peak = new THREE.Mesh(new THREE.ConeGeometry(pr, ph, 7), peakMat);
-      peak.position.set(px, ph / 2 - 18, pz);
-      noShadow(peak);
-      scene.add(peak);
+    const seaGeo = track(new THREE.PlaneGeometry(4500, 4500));
+    if (!lowPower && !opts.reducedMotion) {
+      const wn = tl.load("/world/waternormals.jpg");
+      wn.wrapS = wn.wrapT = THREE.RepeatWrapping;
+      track(wn);
+      water = new Water(seaGeo, {
+        textureWidth: 512,
+        textureHeight: 512,
+        waterNormals: wn,
+        sunDirection: v(0.55, 0.72, 0.42).normalize(),
+        sunColor: 0xffffff,
+        waterColor: 0x03384f,
+        distortionScale: 3.2,
+        fog: false, // the sea stays deep blue out to the horizon
+      });
+      water.rotation.x = -Math.PI / 2;
+      water.position.set(0, SEA_Y, ISLE.z);
+      scene.add(water);
+      track(water.material);
+    } else {
+      const sea = new THREE.Mesh(
+        seaGeo,
+        track(
+          new THREE.MeshPhysicalMaterial({
+            color: 0x0e5e77,
+            roughness: 0.15,
+            metalness: 0,
+            envMapIntensity: 1.2,
+          })
+        )
+      );
+      sea.rotation.x = -Math.PI / 2;
+      sea.position.set(0, SEA_Y, ISLE.z);
+      noShadow(sea);
+      scene.add(sea);
     }
+    // At grazing angles the mirror/env reflection of the hazy sky washes the
+    // sea out to white; a translucent deep-blue veil floating just above the
+    // surface keeps it postcard-ocean-blue while the sparkle shows through.
+    const veil = new THREE.Mesh(
+      track(new THREE.PlaneGeometry(4500, 4500)),
+      track(
+        new THREE.MeshBasicMaterial({
+          color: 0x0d5273,
+          transparent: true,
+          opacity: 0.5,
+          depthWrite: false,
+          fog: false, // scene fog would repaint the whole sea white at distance
+        })
+      )
+    );
+    veil.rotation.x = -Math.PI / 2;
+    veil.position.set(0, SEA_Y + 0.15, ISLE.z);
+    noShadow(veil);
+    scene.add(veil);
+  }
+
+  /* ── Stone path winding through the whole estate ── */
+  {
+    const route = [
+      v(0, 0, 16), v(0, 0, 4), v(-13, 0, -38), v(6, 0, -86), v(-13, 0, -128),
+      v(10, 0, -171), v(-13, 0, -219), v(-3, 0, -256),
+    ];
+    const curve = new THREE.CatmullRomCurve3(route, false, "centripetal", 0.5);
+    const N = 260;
+    const HW = 1.3;
+    const pGeo = track(new THREE.BufferGeometry());
+    const verts = new Float32Array((N + 1) * 2 * 3);
+    const uvs = new Float32Array((N + 1) * 2 * 2);
+    const idx: number[] = [];
+    const pt = new THREE.Vector3();
+    const tan = new THREE.Vector3();
+    let arc = 0;
+    let prev: THREE.Vector3 | null = null;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      curve.getPoint(t, pt);
+      curve.getTangent(t, tan);
+      if (prev) arc += pt.distanceTo(prev);
+      prev = pt.clone();
+      const nx = -tan.z;
+      const nz = tan.x;
+      const inv = 1 / (Math.hypot(nx, nz) || 1);
+      for (const side of [0, 1]) {
+        const s = side === 0 ? 1 : -1;
+        const x = pt.x + nx * inv * HW * s;
+        const z = pt.z + nz * inv * HW * s;
+        const o = (i * 2 + side) * 3;
+        verts[o] = x;
+        verts[o + 1] = terrainHeight(x, z) + 0.16;
+        verts[o + 2] = z;
+        uvs[(i * 2 + side) * 2] = side;
+        uvs[(i * 2 + side) * 2 + 1] = arc / 2.6;
+      }
+      if (i < N) {
+        const a = i * 2;
+        idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+      }
+    }
+    pGeo.setAttribute("position", new THREE.BufferAttribute(verts, 3));
+    pGeo.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+    pGeo.setIndex(idx);
+    pGeo.computeVertexNormals();
+    const path = new THREE.Mesh(
+      pGeo,
+      track(
+        new THREE.MeshStandardMaterial({
+          map: pavingD,
+          normalMap: pavingN,
+          roughness: 0.9,
+          side: THREE.DoubleSide,
+        })
+      )
+    );
+    path.receiveShadow = true;
+    path.userData.noShadow = true;
+    scene.add(path);
   }
 
   /* Scattered pines along the valley (clear of the camera path) */
@@ -458,8 +615,9 @@ export function createOdysseyWorld(
   const pineTrunk = track(
     new THREE.MeshStandardMaterial({ color: 0x4a3826, roughness: 0.9 })
   );
-  const addPine = (x: number, z: number, s: number, snowy = false) => {
+  const addPine = (x: number, z: number, s: number) => {
     const y = terrainHeight(x, z);
+    if (y < -0.6) return; // keep trees on the plateau
     const g = new THREE.Group();
     g.add(box(0.22 * s, 0.9 * s, 0.22 * s, pineTrunk, 0, 0.45 * s, 0));
     const c1 = new THREE.Mesh(new THREE.ConeGeometry(1.0 * s, 1.9 * s, 7), pineLeaf);
@@ -467,11 +625,18 @@ export function createOdysseyWorld(
     const c2 = new THREE.Mesh(new THREE.ConeGeometry(0.7 * s, 1.5 * s, 7), pineLeaf);
     c2.position.y = 2.7 * s;
     g.add(c1, c2);
-    if (snowy) {
-      const cap = new THREE.Mesh(new THREE.ConeGeometry(0.45 * s, 0.7 * s, 7), matWhite);
-      cap.position.y = 3.25 * s;
-      g.add(cap);
-    }
+    g.position.set(x, y, z);
+    scene.add(g);
+  };
+  const addRoundTree = (x: number, z: number, s: number) => {
+    const y = terrainHeight(x, z);
+    if (y < -0.6) return;
+    const g = new THREE.Group();
+    g.add(box(0.25 * s, 1.5 * s, 0.25 * s, pineTrunk, 0, 0.75 * s, 0));
+    const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(1.15 * s, 1), pineLeaf);
+    crown.position.y = 2.1 * s;
+    crown.scale.y = 0.85;
+    g.add(crown);
     g.position.set(x, y, z);
     scene.add(g);
   };
@@ -481,12 +646,78 @@ export function createOdysseyWorld(
       seed = (seed * 16807) % 2147483647;
       return seed / 2147483647;
     };
-    for (let i = 0; i < (lowPower ? 18 : 38); i++) {
+    for (let i = 0; i < (lowPower ? 16 : 32); i++) {
       const side = rand() < 0.5 ? -1 : 1;
-      const x = side * (30 + rand() * 55);
-      const z = 20 - rand() * 330;
-      addPine(x, z, 0.9 + rand() * 1.3, z < -195 && z > -250);
+      const x = side * (28 + rand() * 90);
+      const z = 20 - rand() * 320;
+      if (rand() < 0.35) addRoundTree(x, z, 0.8 + rand());
+      else addPine(x, z, 0.9 + rand() * 1.3);
     }
+    // a small grove behind the entry lawn
+    addRoundTree(-12, 12, 1.3);
+    addPine(13, 9, 1.2);
+    addRoundTree(22, -18, 1.1);
+  }
+
+  /* ── The main villa — a long modern house along the east side ── */
+  {
+    const matPlaster = track(
+      new THREE.MeshStandardMaterial({
+        map: plasterD,
+        normalMap: plasterN,
+        color: 0xf4f2ec,
+        roughness: 0.8,
+      })
+    );
+    const matGlassDark = track(
+      new THREE.MeshPhysicalMaterial({
+        color: 0x1c2a36,
+        roughness: 0.05,
+        metalness: 0.4,
+        envMapIntensity: 1.6,
+      })
+    );
+    const villa = new THREE.Group();
+    // ground floor slab + body
+    villa.add(box(18, 0.5, 68, matConcrete, 0, 0.25, 0));
+    villa.add(box(16, 4.4, 64, matPlaster, 0, 2.45, 0));
+    // long window band on the west face (looking over the path + sea)
+    const band = box(0.2, 2.4, 56, matGlassDark, -8.05, 2.4, 0);
+    noShadow(band);
+    villa.add(band);
+    // window mullions
+    for (let i = 0; i < 8; i++) {
+      villa.add(box(0.26, 2.4, 0.16, matDark, -8.05, 2.4, -24.5 + i * 7));
+    }
+    // flat roof overhang
+    villa.add(box(19, 0.4, 67, matConcrete, -0.6, 4.85, 0));
+    // second floor, cantilevered toward the sea side
+    villa.add(box(13, 3.5, 30, matPlaster, -1.5, 6.9, -12));
+    const band2 = box(0.2, 2.0, 26, matGlassDark, -8.15, 6.8, -12);
+    noShadow(band2);
+    villa.add(band2);
+    villa.add(box(14.6, 0.4, 32.5, matConcrete, -1.5, 8.85, -12));
+    // chimney + entrance
+    villa.add(box(1.3, 7.5, 1.3, matConcrete, 5.5, 3.7, 22));
+    villa.add(box(0.25, 2.8, 2.4, matDark, -8.05, 1.4, 26));
+    villa.position.set(40, 0, -150);
+    scene.add(villa);
+
+    // hedges + planters tying the yard together
+    const hedgeMat = track(
+      new THREE.MeshStandardMaterial({ color: 0x32603a, roughness: 0.95 })
+    );
+    const hedge = (x: number, z: number, w: number, d: number) => {
+      const m = box(w, 1.0, d, hedgeMat, x, terrainHeight(x, z) + 0.5, z);
+      scene.add(m);
+    };
+    hedge(7, 8, 1.2, 14);
+    hedge(-7, 8, 1.2, 14);
+    hedge(30, -110, 1.2, 30);
+    hedge(30, -185, 1.2, 26);
+    hedge(-28, -60, 14, 1.2);
+    hedge(-30, -170, 12, 1.2);
+    hedge(12, -248, 16, 1.1);
   }
 
   /* ════ 0 · HILLSIDE LETTERS ════ */
@@ -1005,29 +1236,23 @@ export function createOdysseyWorld(
   garageLight2.position.copy(STOP.garage).add(v(3.5, 3.4, 2.2));
   scene.add(garageLight, garageLight2);
 
-  /* ════ 5 · SNOW FIELD ════ */
-  const snowG = new THREE.Group();
-  snowG.position.copy(STOP.snow);
+  /* ════ 5 · GEAR DECK — the Jones Frontier on display ════ */
+  const gearG = new THREE.Group();
+  gearG.position.copy(STOP.snow);
   {
-    const snowMat = track(
+    gearG.add(box(7.5, 0.28, 5.5, matWood, 0, 0.14, 0));
+    // freestanding display wall
+    const dispWall = box(4.6, 2.8, 0.2, track(
       new THREE.MeshStandardMaterial({
-        map: snowD,
-        normalMap: snowN,
-        roughness: 0.85,
+        map: plasterD,
+        normalMap: plasterN,
+        color: 0xf4f2ec,
+        roughness: 0.8,
       })
-    );
-    const patch = new THREE.Mesh(new THREE.CircleGeometry(16, 36), snowMat);
-    patch.rotation.x = -Math.PI / 2;
-    patch.position.y = 0.06;
-    patch.userData.noShadow = true;
-    patch.receiveShadow = true;
-    snowG.add(patch);
-    for (const [mx, mz, mr] of [[-3, -2, 2.4], [3.4, -4, 3.2], [1.5, 2.5, 1.7], [-6, 3, 2.0]]) {
-      const mound = new THREE.Mesh(new THREE.SphereGeometry(mr, 20, 14), snowMat);
-      mound.scale.y = 0.3;
-      mound.position.set(mx, 0.1, mz);
-      snowG.add(mound);
-    }
+    ), 0, 1.65, -2.2);
+    gearG.add(dispWall);
+    gearG.add(box(5.0, 0.25, 0.6, matConcrete, 0, 3.15, -2.2)); // cap
+    // the snowboard, wall-mounted at a jaunty angle
     const board = new THREE.Mesh(
       track(new THREE.ExtrudeGeometry(roundedRectShape(0.62, 2.9, 0.3), { depth: 0.05, bevelEnabled: false })),
       [
@@ -1040,38 +1265,25 @@ export function createOdysseyWorld(
         track(new THREE.MeshStandardMaterial({ color: 0x101015, roughness: 0.4 })),
       ]
     );
-    board.position.set(0, 1.35, 0);
-    board.rotation.set(-0.18, 0.35, 0.06);
-    snowG.add(board);
-    snowG.add(box(0.4, 0.3, 0.1, matDark, -0.06, 1.85, 0.14));
-    snowG.add(box(0.4, 0.3, 0.1, matDark, 0.1, 0.95, 0.14));
+    board.position.set(-0.7, 1.65, -2.0);
+    board.rotation.set(0, 0, 0.28);
+    gearG.add(board);
+    gearG.add(box(0.4, 0.3, 0.12, matDark, -0.85, 2.15, -1.95));
+    gearG.add(box(0.4, 0.3, 0.12, matDark, -0.55, 1.15, -1.95));
+    // bench + planter
+    gearG.add(box(2.0, 0.14, 0.65, matWood, 1.7, 0.62, 0.6));
+    gearG.add(box(0.14, 0.36, 0.55, matWood, 0.9, 0.4, 0.6));
+    gearG.add(box(0.14, 0.36, 0.55, matWood, 2.5, 0.4, 0.6));
+    const planter = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.42, 0.34, 0.6, 12),
+      matConcrete
+    );
+    planter.position.set(-2.6, 0.55, 0.8);
+    const shrub = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55, 1), pineLeaf);
+    shrub.position.set(-2.6, 1.25, 0.8);
+    gearG.add(planter, shrub);
   }
-  scene.add(snowG);
-  const SNOW_N = lowPower ? 220 : 520;
-  const snowGeo = track(new THREE.BufferGeometry());
-  const snowPos = new Float32Array(SNOW_N * 3);
-  const snowSpeed = new Float32Array(SNOW_N);
-  for (let i = 0; i < SNOW_N; i++) {
-    snowPos[i * 3] = STOP.snow.x + (Math.random() - 0.5) * 34;
-    snowPos[i * 3 + 1] = STOP.snow.y + Math.random() * 14;
-    snowPos[i * 3 + 2] = STOP.snow.z + (Math.random() - 0.5) * 34;
-    snowSpeed[i] = 0.7 + Math.random() * 1.3;
-  }
-  snowGeo.setAttribute("position", new THREE.BufferAttribute(snowPos, 3));
-  const snowPts = new THREE.Points(
-    snowGeo,
-    track(
-      new THREE.PointsMaterial({
-        color: 0xffffff,
-        size: 0.08,
-        transparent: true,
-        opacity: 0.85,
-        sizeAttenuation: true,
-      })
-    )
-  );
-  noShadow(snowPts);
-  scene.add(snowPts);
+  scene.add(gearG);
 
   /* ════ 6 · CLIFF VILLA DECK ════ */
   const roof = new THREE.Group();
@@ -1110,22 +1322,6 @@ export function createOdysseyWorld(
     roof.add(box(8.5, 0.16, 0.3, matWhite, -7, 0.08, -6.15));
     roof.add(box(0.3, 0.16, 4.6, matWhite, -11.4, 0.08, -4));
     roof.add(box(0.3, 0.16, 4.6, matWhite, -2.6, 0.08, -4));
-    // villa behind the deck
-    const villa = new THREE.Group();
-    villa.add(box(13, 4.2, 6, matWhite, 0, 2.1, 0));
-    villa.add(box(14.4, 0.3, 7.4, matConcrete, 0, 4.35, 0.3));
-    const win = box(11.5, 2.2, 0.1, track(
-      new THREE.MeshPhysicalMaterial({
-        color: 0x2a3947,
-        roughness: 0.04,
-        metalness: 0.5,
-        envMapIntensity: 1.8,
-      })
-    ), 0, 2.0, 3.06);
-    noShadow(win);
-    villa.add(win);
-    villa.position.set(4, 0, -12.5);
-    roof.add(villa);
     // fire bowl + loungers
     const bowl = new THREE.Mesh(
       new THREE.CylinderGeometry(0.55, 0.4, 0.45, 16),
@@ -1237,7 +1433,7 @@ export function createOdysseyWorld(
     sun.target.position.copy(camTarget);
 
     const w1 = bell(f, 1), w2 = bell(f, 2);
-    const w4 = bell(f, 4), w5 = bell(f, 5), w6 = bell(f, 6);
+    const w4 = bell(f, 4), w6 = bell(f, 6);
 
     // 1 · monitors hum
     monLight.intensity = 4 * w1;
@@ -1266,17 +1462,9 @@ export function createOdysseyWorld(
       (0.85 + 0.15 * Math.sin(time * 3.2));
     superCar.position.y = 0.2 + doorT * (0.22 + 0.08 * Math.sin(time * 1.6));
 
-    // 5 · snowfall
-    if (w5 > 0.02 && !opts.reducedMotion) {
-      const sp = snowGeo.attributes.position.array as Float32Array;
-      for (let i = 0; i < SNOW_N; i++) {
-        sp[i * 3 + 1] -= snowSpeed[i] * dt;
-        sp[i * 3] += Math.sin(time * 0.8 + i) * dt * 0.3;
-        if (sp[i * 3 + 1] < STOP.snow.y) {
-          sp[i * 3 + 1] = STOP.snow.y + 13 + Math.random() * 2;
-        }
-      }
-      snowGeo.attributes.position.needsUpdate = true;
+    // the sea breathes
+    if (water) {
+      (water.material as THREE.ShaderMaterial).uniforms.time.value = time * 0.6;
     }
 
     // 6 · fire bowl
