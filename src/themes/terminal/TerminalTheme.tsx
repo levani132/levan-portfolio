@@ -421,26 +421,29 @@ export default function TerminalTheme() {
             <span className="crt-dim">({t("hero.status")})</span>
           );
           break;
-        case "theme":
+        case "theme": {
+          const themes: Array<[name: string, desc: string]> = [
+            ["cosmic", "liquid glass + 8,400 morphing particles"],
+            ["terminal", "you are here."],
+            ["editorial", "brutalist typography, acid ink"],
+            ["odyssey", "3D night-world the camera drives through"],
+          ];
           push(
-            <span className="crt-amber">This site ships 3 full designs:</span>,
-            <span>
-              <span className="crt-cyan">cosmic   </span>
-              <span className="crt-dim">liquid glass + 8,400 morphing particles</span>
-            </span>,
-            <span>
-              <span className="crt-cyan">terminal </span>
-              <span className="crt-dim">you are here.</span>
-            </span>,
-            <span>
-              <span className="crt-cyan">editorial</span>
-              <span className="crt-dim"> brutalist typography, acid ink</span>
-            </span>,
+            <span className="crt-amber">This site ships 4 full designs:</span>,
+            ...themes.map(([name, desc]) => (
+              <span key={name}>
+                <a className="crt-link" href={`/${locale}/${name}`}>
+                  /{name}
+                </a>
+                <span className="crt-dim">  {desc}</span>
+              </span>
+            )),
             <span className="crt-dim">
-              Switch: NEXT_PUBLIC_THEME=cosmic|terminal|editorial
+              Root URL serves NEXT_PUBLIC_THEME (default: cosmic)
             </span>
           );
           break;
+        }
         case "lang": {
           const other = locale === "en" ? "ka" : "en";
           push(
