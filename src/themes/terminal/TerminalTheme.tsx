@@ -69,6 +69,7 @@ const COMMANDS = [
   "whoami",
   "theme",
   "lang",
+  "cmatrix",
   "clear",
 ] as const;
 
@@ -99,6 +100,92 @@ const PROMPT = (
   </>
 );
 
+/* ── cmatrix: full-screen digital rain ──────────────────────────────────── */
+
+const MATRIX_GLYPHS =
+  "アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフ" +
+  "ムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾド" +
+  "ボポヴッン0123456789ＺＡ:．\"=*+-<>¦｜╌çﾘ";
+
+function MatrixRain({ onExit }: { onExit: () => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+
+    const fontSize = 16;
+    let width = 0;
+    let height = 0;
+    let drops: number[] = [];
+
+    const resize = () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      const cols = Math.ceil(width / fontSize);
+      drops = Array.from({ length: cols }, () =>
+        Math.floor((Math.random() * -height) / fontSize)
+      );
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    const glyph = () =>
+      MATRIX_GLYPHS[Math.floor(Math.random() * MATRIX_GLYPHS.length)];
+
+    let raf = 0;
+    const draw = () => {
+      // Fade the previous frame to leave glowing trails.
+      ctx.fillStyle = "rgba(5, 10, 6, 0.07)";
+      ctx.fillRect(0, 0, width, height);
+      ctx.font = `${fontSize}px var(--font-geist-mono), monospace`;
+
+      for (let i = 0; i < drops.length; i++) {
+        const x = i * fontSize;
+        const y = drops[i] * fontSize;
+        // Bright leading character…
+        ctx.fillStyle = "#d9ffe6";
+        ctx.fillText(glyph(), x, y);
+        // …with a dimmer phosphor trail just above it.
+        ctx.fillStyle = "#3ad96b";
+        ctx.fillText(glyph(), x, y - fontSize);
+
+        if (y > height && Math.random() > 0.975) drops[i] = 0;
+        drops[i]++;
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+
+    const onKey = (e: KeyboardEvent) => {
+      if (
+        (e.ctrlKey && (e.key === "c" || e.key === "C")) ||
+        e.key === "Escape" ||
+        e.key === "q"
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        onExit();
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("keydown", onKey, true);
+    };
+  }, [onExit]);
+
+  return (
+    <div className="crt-matrix" onClick={onExit} aria-hidden>
+      <canvas ref={canvasRef} />
+      <span className="crt-matrix-hint">press Ctrl+C to exit</span>
+    </div>
+  );
+}
+
 export default function TerminalTheme() {
   const { t, locale } = useI18n();
   const pathname = usePathname();
@@ -107,6 +194,7 @@ export default function TerminalTheme() {
   const [ready, setReady] = useState(false);
   const [input, setInput] = useState("");
   const [clock, setClock] = useState("");
+  const [matrix, setMatrix] = useState(false);
 
   const idRef = useRef(0);
   const screenRef = useRef<HTMLDivElement>(null);
@@ -182,6 +270,7 @@ export default function TerminalTheme() {
       ["neofetch", "system information"],
       ["theme", "about the 3 visual themes of this site"],
       ["lang", "switch language (en/ka)"],
+      ["cmatrix", "follow the white rabbit (Ctrl+C to exit)"],
       ["clear", "wipe the screen"],
     ];
     push(
@@ -459,6 +548,25 @@ export default function TerminalTheme() {
           );
           break;
         }
+        case "cmatrix":
+          if (
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ) {
+            push(
+              <span className="crt-dim">
+                cmatrix: animations disabled (prefers-reduced-motion).
+              </span>
+            );
+          } else {
+            push(
+              <span className="crt-dim">
+                Wake up, Neo… (Ctrl+C / q / Esc to exit)
+              </span>
+            );
+            setInput("");
+            setMatrix(true);
+          }
+          return;
         case "clear":
           setLines([]);
           return;
@@ -648,7 +756,15 @@ export default function TerminalTheme() {
     if (ready) focusInput();
   }, [ready, focusInput]);
 
+  const stopMatrix = useCallback(() => {
+    setMatrix(false);
+    setInput("");
+    push(<span className="crt-dim">^C</span>);
+    inputRef.current?.focus({ preventScroll: true });
+  }, [push]);
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (matrix) return; // rain is running; exit keys handled by the overlay
     if (e.key === "Enter") {
       run(input);
       setInput("");
@@ -728,6 +844,9 @@ export default function TerminalTheme() {
           aria-label="Terminal input"
         />
       </div>
+
+      {/* cmatrix digital rain */}
+      {matrix && <MatrixRain onExit={stopMatrix} />}
 
       {/* CRT overlays */}
       <div className="crt-glowband" aria-hidden />

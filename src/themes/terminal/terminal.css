@@ -282,6 +282,35 @@
   box-shadow: 0 0 16px rgba(74, 250, 123, 0.5);
 }
 
+/* ── cmatrix digital rain overlay ── */
+.crt-matrix {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  background: var(--crt-bg);
+  cursor: pointer;
+}
+
+.crt-matrix canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.crt-matrix-hint {
+  position: absolute;
+  bottom: 14px;
+  right: clamp(16px, 5vw, 64px);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--crt-green-dim);
+  background: rgba(5, 10, 6, 0.6);
+  padding: 3px 8px;
+  border: 1px solid rgba(74, 250, 123, 0.25);
+  border-radius: 2px;
+  text-shadow: none;
+}
+
 /* Tables (experience list, neofetch) */
 .crt-cols {
   display: grid;
