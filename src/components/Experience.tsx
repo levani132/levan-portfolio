@@ -153,6 +153,13 @@ function JobCard({ job, index }: { job: Job; index: number }) {
                 </motion.div>
               </div>
 
+              {/* Description always renders — present in SSR/no-JS HTML so no
+                  role ever reads as blank, and crawlers see every summary.
+                  Only the detail (bullets/tech/team) lives behind the toggle. */}
+              <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                {t(job.descKey)}
+              </p>
+
               <AnimatePresence>
                 {expanded && (
                   <motion.div
@@ -162,9 +169,6 @@ function JobCard({ job, index }: { job: Job; index: number }) {
                     transition={{ duration: 0.3 }}
                     className="overflow-hidden"
                   >
-                    <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                      {t(job.descKey)}
-                    </p>
                     <ul className="mt-3 space-y-1.5">
                       {job.responsibilityKeys.map((rKey, i) => (
                         <li
@@ -216,10 +220,10 @@ export default function Experience() {
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.6 }}
         >
-          <span className="text-sm font-medium uppercase tracking-widest text-sky-500">
+          <span className="legible text-sm font-medium uppercase tracking-widest text-sky-500">
             {t("exp.label")}
           </span>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-4xl">
+          <h2 className="legible mt-2 text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-4xl">
             {t("exp.heading")}
           </h2>
         </motion.div>

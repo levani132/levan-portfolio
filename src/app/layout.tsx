@@ -21,20 +21,24 @@ const anton = Anton({
 });
 
 export const metadata: Metadata = {
-  title: "Levan Beroshvili — Lead Software Engineer",
+  title: "Levan Beroshvili — Lead Full-Stack Engineer",
   description:
-    "Lead Software Engineer at EPAM Systems, experienced in leading some of the world's biggest companies' most significant projects. Specializing in React, Next.js, Angular, React Native, and TypeScript.",
+    "Lead Full-Stack Engineer with 8+ years building products end to end — React & Next.js front-ends and Node.js/NestJS services backed by MongoDB, Redis, and Docker. Led engineering teams at Microsoft, Bank of Georgia, and EPAM Systems, including AI integration in Skype.",
   keywords: [
     "Levan Beroshvili",
+    "Full-Stack Engineer",
+    "Staff Engineer",
     "Lead Software Engineer",
+    "Product Engineer",
     "EPAM Systems",
     "Microsoft",
-    "Frontend Developer",
     "React",
     "Next.js",
-    "Angular",
-    "React Native",
+    "Node.js",
+    "NestJS",
     "TypeScript",
+    "Angular",
+    "MongoDB",
   ],
   icons: {
     icon: "/favicon.svg",

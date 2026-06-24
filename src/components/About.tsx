@@ -62,13 +62,13 @@ export default function About() {
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.6 }}
         >
-          <span className="text-sm font-medium uppercase tracking-widest text-sky-500">
+          <span className="legible text-sm font-medium uppercase tracking-widest text-sky-500">
             {t("about.label")}
           </span>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-4xl">
+          <h2 className="legible mt-2 text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-4xl">
             {t("about.heading")}
           </h2>
-          <p className="mt-4 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
+          <p className="legible mt-4 max-w-2xl text-lg text-zinc-700 dark:text-zinc-300">
             {t("about.desc")}
           </p>
         </motion.div>

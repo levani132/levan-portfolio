@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Raw audit tool output (regenerable via audit.mjs)
+audit-report.json

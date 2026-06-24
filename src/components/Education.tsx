@@ -31,10 +31,10 @@ export default function Education() {
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.6 }}
         >
-          <span className="text-sm font-medium uppercase tracking-widest text-sky-500">
+          <span className="legible text-sm font-medium uppercase tracking-widest text-sky-500">
             {t("edu.label")}
           </span>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-4xl">
+          <h2 className="legible mt-2 text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-4xl">
             {t("edu.heading")}
           </h2>
         </motion.div>

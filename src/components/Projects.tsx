@@ -62,10 +62,10 @@ export default function Projects() {
           transition={{ duration: 0.6 }}
           className="mb-16 text-center"
         >
-          <span className="text-sm font-medium uppercase tracking-widest text-sky-500">
+          <span className="legible text-sm font-medium uppercase tracking-widest text-sky-500">
             {t("projects.subtitle")}
           </span>
-          <h2 className="mt-3 text-4xl font-bold text-zinc-900 dark:text-zinc-100">
+          <h2 className="legible mt-3 text-4xl font-bold text-zinc-900 dark:text-zinc-100">
             {t("projects.title")}
           </h2>
         </motion.div>

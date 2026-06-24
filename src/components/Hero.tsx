@@ -291,19 +291,19 @@ export default function Hero() {
             {t("hero.firstName")}
           </span>
           <br />
-          <span className="text-zinc-900 dark:text-zinc-100">{t("hero.lastName")}</span>
+          <span className="legible text-zinc-900 dark:text-zinc-100">{t("hero.lastName")}</span>
         </h1>
 
         {/* Title */}
         <p
-          className="hero-entrance hero-delay-400 mt-6 text-xl font-medium text-zinc-500 dark:text-zinc-400 sm:text-2xl"
+          className="legible hero-entrance hero-delay-400 mt-6 text-xl font-medium text-zinc-600 dark:text-zinc-300 sm:text-2xl"
         >
           {t("hero.title")}
         </p>
 
         {/* Description */}
         <p
-          className="hero-entrance hero-delay-500 mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-600 dark:text-zinc-400"
+          className="legible hero-entrance hero-delay-500 mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-zinc-700 dark:text-zinc-300"
         >
           {t("hero.desc")}{" "}
           <span className="font-medium text-zinc-900 dark:text-zinc-200">
@@ -353,6 +353,7 @@ export default function Hero() {
             href="https://www.linkedin.com/in/levan-beroshvili-75753a110/"
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="LinkedIn profile"
             className="glass-card rounded-full p-2.5 text-zinc-600 transition-colors hover:scale-110 hover:text-sky-500 dark:text-zinc-300 dark:hover:text-sky-300"
           >
             <Linkedin size={18} />
@@ -361,6 +362,7 @@ export default function Hero() {
             href="https://github.com/levani132"
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="GitHub profile"
             className="glass-card rounded-full p-2.5 text-zinc-600 transition-colors hover:scale-110 hover:text-sky-500 dark:text-zinc-300 dark:hover:text-sky-300"
           >
             <Github size={18} />
