@@ -4,40 +4,6 @@ import { motion } from "framer-motion";
 import { Code2, Wrench, TestTube, Layout, Server, Users } from "lucide-react";
 import { useI18n } from "@/context/i18n";
 
-const allTech = [
-  "JavaScript",
-  "TypeScript",
-  "React",
-  "Next.js",
-  "Angular",
-  "React Native",
-  "Vue.js",
-  "Node.js",
-  "HTML5",
-  "CSS3",
-  "Tailwind CSS",
-  "Redux",
-  "RxJS",
-  "Jest",
-  "Cypress",
-  "MongoDB",
-  "MySQL",
-  "GraphQL",
-  "REST API",
-  "Webpack",
-  "ElectronJS",
-  "Ionic",
-  ".NET",
-  "Python",
-  "PHP",
-  "Git",
-  "Azure DevOps",
-  "Storybook",
-  "Laravel",
-  "AngularJS",
-  "jQuery",
-];
-
 const categories = [
   {
     icon: Code2,
@@ -158,26 +124,8 @@ export default function Skills() {
         </motion.div>
       </div>
 
-      {/* Marquee ticker */}
-      <div className="relative mt-12">
-        <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-24 bg-linear-to-r from-white/80 to-transparent dark:from-black/70" />
-        <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-24 bg-linear-to-l from-white/80 to-transparent dark:from-black/70" />
-        <div className="flex overflow-hidden">
-          <div className="animate-marquee flex shrink-0 items-center gap-4 pr-4">
-            {[...allTech, ...allTech].map((tech, i) => (
-              <span
-                key={`${tech}-${i}`}
-                className="glass-card whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-200"
-              >
-                {tech}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* Category grid */}
-      <div className="mx-auto mt-16 max-w-5xl px-6">
+      <div className="mx-auto mt-12 max-w-5xl px-6">
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {localCategories.map((cat, i) => (
             <motion.div

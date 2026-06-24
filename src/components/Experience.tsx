@@ -41,8 +41,8 @@ const jobs: Job[] = [
     client: "Skype",
     periodKey: "exp.2.period",
     descKey: "exp.2.desc",
-    responsibilityKeys: ["exp.2.r0", "exp.2.r1", "exp.2.r2"],
-    tech: ["React Native"],
+    responsibilityKeys: ["exp.2.r0", "exp.2.r1", "exp.2.r2", "exp.2.r3", "exp.2.r4"],
+    tech: ["React Native", "TypeScript", "Copilot APIs"],
     teamKey: "exp.2.team",
   },
   {

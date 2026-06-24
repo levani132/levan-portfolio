@@ -203,24 +203,24 @@ function AnimatedCounter({
 }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true });
-  const [count, setCount] = useState(0);
+  // Real value is the default — so static HTML, JS-blocked users, and crawlers
+  // all see the correct figure. The count-up is a progressive enhancement.
+  const [count, setCount] = useState(target);
 
   useEffect(() => {
     if (!isInView) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const duration = 2000;
-    const steps = 60;
-    const increment = target / steps;
-    let current = 0;
-    const timer = setInterval(() => {
-      current += increment;
-      if (current >= target) {
-        setCount(target);
-        clearInterval(timer);
-      } else {
-        setCount(Math.floor(current));
-      }
-    }, duration / steps);
-    return () => clearInterval(timer);
+    let startTime: number | null = null;
+    let raf = 0;
+    const tick = (now: number) => {
+      if (startTime === null) startTime = now;
+      const progress = Math.min((now - startTime) / duration, 1);
+      setCount(Math.floor(progress * target));
+      if (progress < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, [isInView, target]);
 
   return (
@@ -287,14 +287,8 @@ export default function Hero() {
         <h1
           className="hero-entrance hero-delay-200 relative mt-8 text-6xl font-bold tracking-tight sm:text-7xl lg:text-8xl"
         >
-          <span className="relative inline-block">
-            <span
-              aria-hidden
-              className="aurora-text absolute inset-0 blur-2xl opacity-50 dark:opacity-70"
-            >
-              {t("hero.firstName")}
-            </span>
-            <span className="aurora-text relative">{t("hero.firstName")}</span>
+          <span className="aurora-text aurora-glow relative inline-block">
+            {t("hero.firstName")}
           </span>
           <br />
           <span className="text-zinc-900 dark:text-zinc-100">{t("hero.lastName")}</span>

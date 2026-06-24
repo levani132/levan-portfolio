@@ -27,10 +27,10 @@ const dict = {
   "hero.status": { en: "Currently at EPAM Systems", ka: "ამჟამად EPAM Systems-ში" },
   "hero.firstName": { en: "Levan", ka: "ლევან" },
   "hero.lastName": { en: "Beroshvili", ka: "ბეროშვილი" },
-  "hero.title": { en: "Lead Software Engineer", ka: "წამყვანი პროგრამული ინჟინერი" },
+  "hero.title": { en: "Lead Full-Stack Engineer", ka: "წამყვანი Full-Stack ინჟინერი" },
   "hero.desc": {
-    en: "8+ years building scalable front-end architectures and leading engineering teams at companies like",
-    ka: "8+ წლიანი გამოცდილება მასშტაბური ფრონტ-ენდ არქიტექტურების შექმნასა და საინჟინრო გუნდების ხელმძღვანელობაში კომპანიებში, როგორიცაა",
+    en: "8+ years building full-stack products end to end — from micro-frontend architectures to Node.js & NestJS services — and leading engineering teams at companies like",
+    ka: "8+ წლიანი გამოცდილება სრული სტეკის პროდუქტების შექმნაში — მიკრო-ფრონტენდ არქიტექტურებიდან Node.js და NestJS სერვისებამდე — და საინჟინრო გუნდების ხელმძღვანელობაში კომპანიებში, როგორიცაა",
   },
   "hero.and": { en: "and", ka: "და" },
   "hero.getInTouch": { en: "Get in touch", ka: "დამიკავშირდით" },
@@ -44,23 +44,23 @@ const dict = {
   "about.label": { en: "About Me", ka: "ჩემს შესახებ" },
   "about.heading": { en: "What I Bring to the Table", ka: "რას ვთავაზობ" },
   "about.desc": {
-    en: "Lead Software Engineer with 8+ years of experience in front-end development, scalable infrastructure design, and cross-functional team leadership. Passionate about writing clear documentation to future-proof projects and enhance team collaboration.",
-    ka: "წამყვანი პროგრამული ინჟინერი 8+ წლიანი გამოცდილებით ფრონტ-ენდ განვითარებაში, მასშტაბური ინფრასტრუქტურის დიზაინსა და ჯვარედინი გუნდების ხელმძღვანელობაში. მომავლისთვის მზა დოკუმენტაციების წერა გუნდური თანამშრომლობის გასაძლიერებლად.",
+    en: "Full-stack engineer with 8+ years shipping production software across the whole stack — React & Next.js front-ends, Node.js / NestJS services, and the data layers behind them (MongoDB, Redis, SQL). I design micro-frontend and end-to-end architectures from scratch, set engineering standards, and write the documentation that keeps systems maintainable as teams grow.",
+    ka: "სრული სტეკის ინჟინერი 8+ წლიანი გამოცდილებით — React და Next.js ფრონტენდი, Node.js / NestJS სერვისები და მათ უკან მდგომი მონაცემთა შრეები (MongoDB, Redis, SQL). ვქმნი მიკრო-ფრონტენდ და სრულ (E2E) არქიტექტურებს ნულიდან, ვაწესებ საინჟინრო სტანდარტებს და ვწერ დოკუმენტაციას, რომელიც სისტემებს გუნდის ზრდისას მართვადს ინარჩუნებს.",
   },
   "about.communication": { en: "Communication", ka: "კომუნიკაცია" },
   "about.communication.desc": {
     en: "Effective communication skills ensuring multiple teams achieve the same goal seamlessly.",
     ka: "ეფექტური კომუნიკაციის უნარები, რომლებიც უზრუნველყოფენ მრავალი გუნდის ერთიანი მიზნის მიღწევას.",
   },
-  "about.motivation": { en: "Team Motivation", ka: "გუნდის მოტივაცია" },
+  "about.motivation": { en: "Full-Stack Engineering", ka: "სრული სტეკის ინჟინერია" },
   "about.motivation.desc": {
-    en: "Motivating teams to achieve their goals without stress and with high efficiency.",
-    ka: "გუნდების მოტივაცია მიზნების მისაღწევად სტრესის გარეშე და მაღალი ეფექტურობით.",
+    en: "Backend depth to match the front-end — Node.js & NestJS APIs, MongoDB, Redis, and Dockerized services in an NX monorepo, shipped in my own products.",
+    ka: "ფრონტენდის შესაბამისი ბექენდის სიღრმე — Node.js და NestJS API-ები, MongoDB, Redis და Docker სერვისები NX მონორეპოში, რეალურ პროდუქტებში მიწოდებული.",
   },
-  "about.reliability": { en: "Reliability", ka: "საიმედოობა" },
+  "about.reliability": { en: "Engineering Standards", ka: "საინჟინრო სტანდარტები" },
   "about.reliability.desc": {
-    en: "Always reliable to finish the job despite its complexity.",
-    ka: "ყოველთვის საიმედო სამუშაოს დასასრულებლად, მიუხედავად მისი სირთულისა.",
+    en: "Setting code, review, and delivery standards — and staying hands-on to enforce them — so quality scales with the team.",
+    ka: "კოდის, რევიუსა და მიწოდების სტანდარტების დაწესება — და მათი დაცვა პრაქტიკაში — რათა ხარისხი გუნდთან ერთად იზრდებოდეს.",
   },
   "about.microfe": { en: "Micro Front-End Architecture", ka: "მიკრო ფრონტ-ენდ არქიტექტურა" },
   "about.microfe.desc": {
@@ -85,15 +85,15 @@ const dict = {
   "exp.present": { en: "Present", ka: "დღემდე" },
 
   /* Job 0 – EPAM / Gilbert Orchards */
-  "exp.0.title": { en: "Team Lead & Delivery Manager", ka: "გუნდის ლიდერი და მიწოდების მენეჯერი" },
+  "exp.0.title": { en: "Lead Full-Stack Engineer", ka: "წამყვანი Full-Stack ინჟინერი" },
   "exp.0.period": { en: "Apr 2025 — Present", ka: "აპრ 2025 — დღემდე" },
   "exp.0.desc": {
-    en: "Building an internal application for Gilbert Orchards related to supply chain visibility.",
-    ka: "Gilbert Orchards-ის შიდა აპლიკაციის შექმნა, რომელიც მიწოდების ჯაჭვის ხილვადობას უკავშირდება.",
+    en: "Building a supply-chain visibility platform for Gilbert Orchards, owning architecture across the full stack.",
+    ka: "Gilbert Orchards-ისთვის მიწოდების ჯაჭვის ხილვადობის პლატფორმის შექმნა, არქიტექტურის სრულ სტეკზე ფლობით.",
   },
   "exp.0.r0": {
-    en: "Leading the development team to create both FE and BE solutions for Gilbert's supply chain application.",
-    ka: "დეველოპმენტის გუნდის ხელმძღვანელობა FE და BE გადაწყვეტილებების შესაქმნელად Gilbert-ის მიწოდების ჯაჭვის აპლიკაციისთვის.",
+    en: "Leading architecture and hands-on development of both the front-end and back-end for Gilbert's supply-chain visibility platform.",
+    ka: "Gilbert-ის მიწოდების ჯაჭვის ხილვადობის პლატფორმის ფრონტენდისა და ბექენდის არქიტექტურისა და პრაქტიკული შემუშავების ხელმძღვანელობა.",
   },
 
   /* Job 1 – EPAM / Thomson Reuters */
@@ -104,8 +104,8 @@ const dict = {
     ka: "UFile-ის ხელმისაწვდომობის დეფექტების გამოსწორება — კანადის საგადასახადო მართვის ვებ-აპლიკაცია Thomson Reuters-ის საგადასახადო და ბუღალტრული აღრიცხვის დეპარტამენტში.",
   },
   "exp.1.r0": {
-    en: "Managed work intake, distribution, and execution for the development team.",
-    ka: "სამუშაოს მიღების, განაწილებისა და შესრულების მართვა დეველოპმენტის გუნდისთვის.",
+    en: "Owned the team's technical approach to accessibility remediation — fix patterns, code reviews, and execution.",
+    ka: "გუნდის ტექნიკური მიდგომის ფლობა ხელმისაწვდომობის გამოსწორებაში — გადაჭრის შაბლონები, კოდის რევიუ და შესრულება.",
   },
   "exp.1.r1": {
     en: "Maintained efficient communication within the team and with client managers.",
@@ -133,20 +133,28 @@ const dict = {
   "exp.2.title": { en: "Lead Developer", ka: "წამყვანი დეველოპერი" },
   "exp.2.period": { en: "Jan 2023 — Aug 2024", ka: "იან 2023 — აგვ 2024" },
   "exp.2.desc": {
-    en: "Integrated ChatGPT and related features into Skype, including Copilot and Designer (image creator).",
-    ka: "ChatGPT-ისა და მასთან დაკავშირებული ფუნქციების ინტეგრაცია Skype-ში, მათ შორის Copilot და Designer (გამოსახულების შემქმნელი).",
+    en: "Integrated ChatGPT-powered AI into Skype — the Copilot assistant, Bing Image Creator, and content generation — shipped across iOS, Android, web, and desktop to a global consumer base in the hundreds of millions.",
+    ka: "ChatGPT-ზე დაფუძნებული AI-ის ინტეგრაცია Skype-ში — Copilot ასისტენტი, Bing Image Creator და კონტენტის გენერაცია — მიწოდებული iOS-ზე, Android-ზე, ვებსა და დესკტოპზე ასობით მილიონიან გლობალურ აუდიტორიაზე.",
   },
   "exp.2.r0": {
-    en: "Implemented UI for natural integration of Copilot in Skype.",
-    ka: "Copilot-ის Skype-ში ბუნებრივი ინტეგრაციისთვის UI-ის იმპლემენტაცია.",
+    en: "Built the front-end for Copilot's native integration into Skype chat — message UI, streaming responses, and entry points — in React Native across all client platforms.",
+    ka: "Copilot-ის Skype-ის ჩატში ბუნებრივი ინტეგრაციის ფრონტენდის შექმნა — შეტყობინებების UI, სტრიმინგ პასუხები და შესვლის წერტილები — React Native-ში ყველა პლატფორმაზე.",
   },
   "exp.2.r1": {
-    en: "Communicated with other teams across the organization for getting relevant APIs and information.",
-    ka: "კომუნიკაცია ორგანიზაციის სხვა გუნდებთან შესაბამისი API-ების და ინფორმაციის მისაღებად.",
+    en: "Partnered with the Copilot, Bing, and Designer teams across Microsoft to integrate their APIs into Skype's messaging stack.",
+    ka: "თანამშრომლობა Copilot-ის, Bing-ისა და Designer-ის გუნდებთან Microsoft-ში მათი API-ების Skype-ის მესიჯინგ სტეკში ინტეგრაციისთვის.",
   },
   "exp.2.r2": {
-    en: "Wrote documentation and data flow diagrams for implemented features.",
-    ka: "იმპლემენტირებული ფუნქციების დოკუმენტაციისა და მონაცემთა ნაკადის დიაგრამების შექმნა.",
+    en: "Shipped the image-generation experience end to end — prompt entry, generation states, and inline rendering of results directly in the chat.",
+    ka: "გამოსახულების გენერაციის გამოცდილების სრული მიწოდება — პრომპტის შეყვანა, გენერაციის მდგომარეობები და შედეგების ჩატში პირდაპირ ჩვენება.",
+  },
+  "exp.2.r3": {
+    en: "Maintained cross-platform parity so AI features behaved identically on mobile, web, and desktop clients.",
+    ka: "კროს-პლატფორმული თანმიმდევრულობის შენარჩუნება, რათა AI ფუნქციები მობილურზე, ვებსა და დესკტოპზე ერთნაირად მუშაობდეს.",
+  },
+  "exp.2.r4": {
+    en: "Authored the documentation and data-flow diagrams that became the team's reference for the client's AI features.",
+    ka: "დოკუმენტაციისა და მონაცემთა ნაკადის დიაგრამების შექმნა, რომლებიც გუნდისთვის კლიენტის AI ფუნქციების საცნობარო გახდა.",
   },
   "exp.2.team": { en: "5 developers, 1 PM, 1 EM", ka: "5 დეველოპერი, 1 PM, 1 EM" },
 
@@ -178,20 +186,20 @@ const dict = {
   "exp.4.title": { en: "Head of Software Engineering Unit", ka: "პროგრამული ინჟინერიის ერთეულის ხელმძღვანელი" },
   "exp.4.period": { en: "Jan 2022 — Jun 2022", ka: "იან 2022 — ივნ 2022" },
   "exp.4.desc": {
-    en: "Managed a unit of engineers focused on Angular projects for the bank's Core Banking Systems.",
-    ka: "Angular პროექტებზე ფოკუსირებული ინჟინრების ერთეულის მართვა ბანკის Core Banking Systems-ისთვის.",
+    en: "Led the Angular engineering unit behind the bank's Core Banking System — the platform front- and back-office staff use daily to manage banking products.",
+    ka: "ბანკის Core Banking System-ის Angular საინჟინრო ერთეულის ხელმძღვანელობა — პლატფორმა, რომელსაც ფრონტ და ბექ ოფისის თანამშრომლები ყოველდღიურად იყენებენ საბანკო პროდუქტების სამართავად.",
   },
   "exp.4.r0": {
-    en: "Oversaw all development activities and ensured project objectives were met.",
-    ka: "ყველა დეველოპმენტის აქტივობის ზედამხედველობა და პროექტის მიზნების მიღწევის უზრუნველყოფა.",
+    en: "Set the architecture and technical standards for the unit's Angular applications.",
+    ka: "ერთეულის Angular აპლიკაციების არქიტექტურისა და ტექნიკური სტანდარტების დაწესება.",
   },
   "exp.4.r1": {
-    en: "Coordinated efforts, optimized workflows, and maintained high-quality standards.",
-    ka: "ძალისხმევის კოორდინაცია, სამუშაო პროცესების ოპტიმიზაცია და მაღალი ხარისხის სტანდარტების შენარჩუნება.",
+    en: "Established code-review, estimation, and delivery practices that improved quality and predictability.",
+    ka: "კოდის რევიუს, შეფასებისა და მიწოდების პრაქტიკების დანერგვა, რამაც ხარისხი და პროგნოზირებადობა გააუმჯობესა.",
   },
   "exp.4.r2": {
-    en: "Led project planning and ensured timely delivery of scalable Angular-based applications.",
-    ka: "პროექტის დაგეგმვის ხელმძღვანელობა და Angular-ზე დაფუძნებული მასშტაბური აპლიკაციების დროული მიწოდების უზრუნველყოფა.",
+    en: "Stayed hands-on — reviewing PRs, unblocking complex features, and shipping critical paths alongside the team.",
+    ka: "პრაქტიკაში ჩართული — PR-ების რევიუ, რთული ფუნქციების განბლოკვა და კრიტიკული ნაწილების მიწოდება გუნდთან ერთად.",
   },
 
   /* Job 5 – Bank of Georgia (Lead) */
@@ -333,7 +341,7 @@ const dict = {
   "projects.soulart.role": { en: "Founder & Full-Stack Developer", ka: "დამფუძნებელი და Full-Stack დეველოპერი" },
 
   /* ── Footer ── */
-  "footer.title": { en: "Lead Software Engineer", ka: "წამყვანი პროგრამული ინჟინერი" },
+  "footer.title": { en: "Lead Full-Stack Engineer", ka: "წამყვანი Full-Stack ინჟინერი" },
   "footer.rights": { en: "All rights reserved.", ka: "ყველა უფლება დაცულია." },
 } as const;
 

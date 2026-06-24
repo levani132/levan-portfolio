@@ -60,6 +60,12 @@ body {
   background-clip: text;
 }
 
+/* Soft glow echo behind aurora text — a blurred colored copy via the glyph
+ * alpha mask, so the glow needs no duplicated DOM text node. */
+.aurora-glow {
+  filter: drop-shadow(0 0 28px rgba(129, 140, 248, 0.45));
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .gradient-text {
     animation: gradient-shift 8s ease infinite;
@@ -135,20 +141,6 @@ body {
   opacity: 0;
   animation: orb-fade-in 1.5s ease-out 0.8s forwards;
   will-change: transform;
-}
-
-/* Marquee animation */
-@keyframes marquee {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-.animate-marquee {
-  animation: marquee 40s linear infinite;
 }
 
 /* ── Apple Liquid Glass utility classes ──────────────────────────────────

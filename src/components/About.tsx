@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import {
   MessageSquare,
-  Zap,
+  Server,
   Shield,
   Blocks,
   GitBranch,
@@ -22,7 +22,7 @@ export default function About() {
       span: "sm:col-span-2",
     },
     {
-      icon: Zap,
+      icon: Server,
       title: t("about.motivation"),
       description: t("about.motivation.desc"),
       span: "",
